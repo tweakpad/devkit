@@ -253,7 +253,7 @@ function runWriter(writer: Writer): void {
 
 function reportError(error: unknown): void {
   // One failing binding must not stop the loop for every other one.
-  console.error('[tweakpad]', error);
+  console.error('[devkit]', error);
 }
 
 let shared: Scheduler | undefined;

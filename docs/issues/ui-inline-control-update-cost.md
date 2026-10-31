@@ -41,7 +41,7 @@ the library source is not modified. Measured per value-only update:
 ## Reproduce
 
 The harness is `demo/library-proof.html` / `demo/library-proof.ts` in
-[tweakpad/tweakpad](https://github.com/tweakpad/tweakpad). It is not pushed yet; it will be
+[tweakpad/devkit](https://github.com/tweakpad/devkit). It is not pushed yet; it will be
 available there with the project's initial commit.
 
 ```sh

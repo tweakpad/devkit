@@ -14,7 +14,7 @@ import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
 let registered = false;
 
 /**
- * Defines the six library inline controls tweakpad uses (and what they render) plus the pane's
+ * Defines the six library inline controls devkit uses (and what they render) plus the pane's
  * own elements. Nothing else from the library is registered.
  */
 export function registerElements(): void {

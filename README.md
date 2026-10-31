@@ -1,12 +1,12 @@
-# tweakpad
+# @tweakpad/devkit
 
 A tweak panel for tuning live values, built on the `variant="inline"` controls of
-[`@tweakpad/ui`](https://github.com/tweakpad/ui). It uses no UI framework: tweakpad owns its own
+[`@tweakpad/ui`](https://github.com/tweakpad/ui). It uses no UI framework: devkit owns its own
 state, bindings and scheduling.
 
 ```ts
 import '@tweakpad/ui/styles.css';
-import { Pane } from '@tweakpad/tweakpad';
+import { Pane } from '@tweakpad/devkit';
 
 const pane = new Pane({ title: 'Scene' });
 const tabs = pane.addTabs({ pages: [{ title: 'Camera' }, { title: 'Stats' }] });
@@ -30,7 +30,7 @@ The control is inferred from the value; `view` overrides the inference.
 | CSS color string, or `{r,g,b}` | `tp-color-input` inline                                 |
 | string                         | `tp-input` inline                                       |
 
-Monitors are tweakpad's own lightweight rows: `text` writes a single Text node, and `graph` is
+Monitors are devkit's own lightweight rows: `text` writes a single Text node, and `graph` is
 a canvas fed from a Float32Array ring buffer.
 
 ## Architecture

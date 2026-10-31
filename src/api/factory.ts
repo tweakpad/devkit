@@ -69,7 +69,7 @@ export function inferKind(value: unknown, params: BindingParams): ControlKind {
     default:
       if (isColorObject(value)) return 'color';
       throw new TypeError(
-        `tweakpad: no control for a value of type ${value === null ? 'null' : typeof value}`,
+        `devkit: no control for a value of type ${value === null ? 'null' : typeof value}`,
       );
   }
 }

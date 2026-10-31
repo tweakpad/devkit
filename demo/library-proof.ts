@@ -273,7 +273,7 @@ function observeDeep(root: Node) {
 
 // ---------------------------------------------------------------- harness
 
-// The stage lives in a shadow root, as tweakpad's rows do.
+// The stage lives in a shadow root, as devkit's rows do.
 const host = document.getElementById('stage')!;
 const stageRoot = host.attachShadow({ mode: 'open' });
 const frame = () => new Promise<number>((r) => requestAnimationFrame(r));
@@ -334,7 +334,7 @@ async function countOneUpdate(kind: Kind, els: El[]) {
   };
 }
 
-/** 30 of 40 visible controls updated per frame, flushed synchronously as tweakpad does. */
+/** 30 of 40 visible controls updated per frame, flushed synchronously as devkit does. */
 async function timeFrames(kind: Kind, els: El[], frames = 90) {
   const sync: number[] = [];
   const work: number[] = [];
