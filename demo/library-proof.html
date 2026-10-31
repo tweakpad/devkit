@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library update cost proof</title>
+    <style>
+      body {
+        font:
+          13px/1.4 system-ui,
+          sans-serif;
+        padding: 16px;
+      }
+
+      #stage {
+        display: block;
+        max-inline-size: 22rem;
+      }
+
+      pre {
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>@tweakpad/ui inline control update cost</h1>
+    <p><button id="run">Run</button></p>
+    <div id="stage" dir="ltr"></div>
+    <pre id="out"></pre>
+    <script type="module" src="./library-proof.ts"></script>
+  </body>
+</html>

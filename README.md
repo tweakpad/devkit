@@ -83,20 +83,16 @@ The remaining cost belongs to the library elements. The library cost spike
 (`demo/spike-library.html`) measured 110–290 µs per `.value` update, and 0.2–3.3 ms to mount
 each element. Profiling put about 35–50% of each update in `PresentationController.refresh()`,
 which runs after every update even when only the value changed. The rendering after each update
-is roughly as expensive again. Hot spots to fix in `@tweakpad/ui`:
-
-- `PresentationController.refresh()` re-derives part bindings and calls `element.part.add(...)`
-  on every update. Each call re-sets the `part` attribute, which likely invalidates styles.
-- `tp-slider` updates its thumb in a second Lit update, and connects a
-  `ComposedEnvironmentObserver` per instance.
-- `tp-checkbox` and `tp-switch` observe their whole root node.
-- `tp-input` creates a light-DOM stylesheet per instance.
+is roughly as expensive again. The evidence and proposed fixes for `@tweakpad/ui` are in
+[docs/issues/ui-inline-control-update-cost.md](docs/issues/ui-inline-control-update-cost.md),
+reproducible with `demo/library-proof.html` (run Vite with `NODE_ENV=production`).
 
 ## Development
 
 ```sh
 npm install        # links ../library as @tweakpad/ui (build the library first)
 npm run dev        # playground at /, stress at /demo/stress.html, spike at /demo/spike-library.html
+NODE_ENV=production npx vite   # production Lit, for /demo/library-proof.html
 npm test           # core unit tests
 npm run lint && npm run typecheck && npm run build
 ```
