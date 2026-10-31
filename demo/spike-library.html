@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library inline cost spike</title>
+    <style>
+      body {
+        font:
+          13px/1.4 system-ui,
+          sans-serif;
+        padding: 16px;
+      }
+      #stage {
+        display: grid;
+        gap: 4px;
+        max-inline-size: 22rem;
+        block-size: 60vh;
+        overflow: auto;
+      }
+      table {
+        border-collapse: collapse;
+        margin-block: 12px;
+      }
+      td,
+      th {
+        border: 1px solid #8884;
+        padding: 2px 8px;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Library inline cost spike</h1>
+    <p>
+      <label>N <input id="n" type="number" value="1000" /></label>
+      <button id="run">Run all kinds</button>
+      <span id="status"></span>
+    </p>
+    <table id="results">
+      <thead>
+        <tr>
+          <th>kind</th>
+          <th>N</th>
+          <th>mount ms</th>
+          <th>mount µs/el</th>
+          <th>first frame ms</th>
+          <th>update 30 ms (avg)</th>
+          <th>update µs/el</th>
+          <th>frame dt avg ms</th>
+          <th>frame dt p95 ms</th>
+          <th>teardown ms</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="stage" dir="ltr"></div>
+    <script type="module" src="./spike-profile.ts"></script>
+    <script type="module" src="./spike-library.ts"></script>
+  </body>
+</html>

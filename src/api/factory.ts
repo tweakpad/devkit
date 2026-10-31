@@ -1,0 +1,146 @@
+import { Binding, type ValueCodec } from '../core/binding.js';
+import { displayResolution, numberEquals, type Equals } from '../core/equality.js';
+import {
+  colorObjectCodec,
+  isColorObject,
+  isColorString,
+  type ColorObjectType,
+} from '../controls/color.js';
+import type { LibraryView } from '../controls/library-view.js';
+import {
+  BooleanView,
+  ColorView,
+  NumberView,
+  SelectView,
+  SliderView,
+  TextView,
+  type ColorFormat,
+  type SelectItem,
+} from '../controls/views.js';
+import type { PaneContext } from './context.js';
+
+export type ControlKind = 'slider' | 'number' | 'text' | 'checkbox' | 'switch' | 'select' | 'color';
+
+export type OptionList =
+  | Record<string, unknown>
+  | readonly (string | number | boolean)[]
+  | readonly { label: string; value: unknown }[];
+
+export interface BindingParams {
+  /** Row label; defaults to the property key. */
+  label?: string;
+  /** Control to use; inferred from the value and the other options when omitted. */
+  view?: ControlKind;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Decimals shown and compared; defaults to the decimals of `step`. */
+  precision?: number;
+  /** Turns any value into a pick from these options. */
+  options?: OptionList;
+  /** Color handling: object channel range, string notation, alpha. */
+  color?: { type?: ColorObjectType; format?: ColorFormat; alpha?: boolean };
+  /** Sampling interval in ms for this binding; 0 every frame, -1 only on refresh(). */
+  interval?: number;
+  disabled?: boolean;
+  hidden?: boolean;
+}
+
+export function toItems(options: OptionList): SelectItem[] {
+  if (Array.isArray(options))
+    return options.map((option) =>
+      typeof option === 'object' && option !== null
+        ? { label: String((option as SelectItem).label), value: (option as SelectItem).value }
+        : { label: String(option), value: option },
+    );
+  return Object.entries(options).map(([label, value]) => ({ label, value }));
+}
+
+export function inferKind(value: unknown, params: BindingParams): ControlKind {
+  if (params.view) return params.view;
+  if (params.options) return 'select';
+  switch (typeof value) {
+    case 'number':
+      return params.min !== undefined && params.max !== undefined ? 'slider' : 'number';
+    case 'boolean':
+      return 'checkbox';
+    case 'string':
+      return isColorString(value) ? 'color' : 'text';
+    default:
+      if (isColorObject(value)) return 'color';
+      throw new TypeError(
+        `tweakpad: no control for a value of type ${value === null ? 'null' : typeof value}`,
+      );
+  }
+}
+
+export interface CreatedControl {
+  binding: Binding<unknown>;
+  view: LibraryView<unknown>;
+  kind: ControlKind;
+}
+
+export function createControl(
+  context: PaneContext,
+  target: object,
+  key: PropertyKey,
+  params: BindingParams,
+): CreatedControl {
+  const raw = (target as Record<PropertyKey, unknown>)[key];
+  const kind = inferKind(raw, params);
+  const label = params.label ?? String(key);
+  const interval = params.interval ?? context.interval;
+  const scheduler = context.scheduler;
+
+  const make = <T>(equals?: Equals<T>, codec?: ValueCodec<T>): Binding<T> =>
+    new Binding<T>(scheduler, target, key, {
+      interval,
+      ...(equals ? { equals } : {}),
+      ...(codec ? { codec } : {}),
+    });
+
+  switch (kind) {
+    case 'slider':
+    case 'number': {
+      const spec = {
+        min: params.min,
+        max: params.max,
+        step: params.step,
+        precision: params.precision,
+      };
+      const binding = make<number>(numberEquals(displayResolution(params.step, params.precision)));
+      const view =
+        kind === 'slider'
+          ? new SliderView(binding, label, spec)
+          : new NumberView(binding, label, spec);
+      return { binding, view, kind } as unknown as CreatedControl;
+    }
+    case 'checkbox':
+    case 'switch': {
+      const binding = make<boolean>();
+      const view = new BooleanView(binding, label, kind === 'switch' ? 'tp-switch' : 'tp-checkbox');
+      return { binding, view, kind } as unknown as CreatedControl;
+    }
+    case 'select': {
+      const binding = make<unknown>();
+      const view = new SelectView(binding, label, toItems(params.options ?? []));
+      return { binding, view, kind };
+    }
+    case 'color': {
+      const objectValue = isColorObject(raw);
+      const binding = objectValue
+        ? make<string>(undefined, colorObjectCodec(params.color?.type ?? 'int'))
+        : make<string>();
+      const view = new ColorView(binding, label, {
+        format: objectValue ? 'hex' : params.color?.format,
+        alpha: objectValue ? false : params.color?.alpha,
+      });
+      return { binding, view, kind } as unknown as CreatedControl;
+    }
+    case 'text': {
+      const binding = make<string>();
+      const view = new TextView(binding, label);
+      return { binding, view, kind } as unknown as CreatedControl;
+    }
+  }
+}

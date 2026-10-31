@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tweakpad playground</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        block-size: 100%;
+        background: var(--tp-background);
+        color: var(--tp-foreground);
+        font-family: var(--tp-font-sans);
+      }
+
+      canvas {
+        display: block;
+        inline-size: 100vw;
+        block-size: 100vh;
+      }
+
+      nav {
+        position: fixed;
+        inset-block-end: 12px;
+        inset-inline-start: 12px;
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+      }
+
+      nav a {
+        color: var(--tp-muted-foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <nav>
+      <a href="/">Playground</a>
+      <a href="/demo/stress.html">Stress (1000 bindings)</a>
+      <a href="/demo/spike-library.html">Library cost spike</a>
+    </nav>
+    <script type="module" src="/demo/playground.ts"></script>
+  </body>
+</html>
