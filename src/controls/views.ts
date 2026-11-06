@@ -231,7 +231,8 @@ export class ColorView extends LibraryView<string> {
       defineElement(TpColorPicker.tagName, TpColorPicker);
       const picker = document.createElement('tp-color-picker') as TpColorPicker;
       picker.picker = 'popup';
-      picker.label = this.label;
+      // The inline trigger owns the visible label; the wrapper only needs an accessible name.
+      picker.setAttribute('aria-label', this.label);
       picker.format = this.options.format ?? 'hex';
       picker.formats = [picker.format];
       picker.formatSelect = false;
