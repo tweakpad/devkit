@@ -13,6 +13,13 @@ import { TextMonitorView } from '../monitors/text-monitor.js';
 import { Chunk, CHUNK_SIZE, type PaneContext, type Row } from './context.js';
 import { createControl, type BindingParams, type ControlKind } from './factory.js';
 import { ControlRow, GraphMonitorRow, TextMonitorRow } from './rows.js';
+import {
+  ButtonApi,
+  ButtonRow,
+  ButtonsApi,
+  type ButtonParams,
+  type ButtonsParams,
+} from './buttons.js';
 
 export interface MonitorParams {
   label?: string;
@@ -114,6 +121,27 @@ export class ContainerApi {
     if (params.hidden) row.setHidden(true);
     this.#addRow(row, { name: String(key), label });
     const api = new MonitorApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /** Adds one action using the library Button. Search matches its name and current title. */
+  addButton(params: ButtonParams): ButtonApi {
+    const row = new ButtonRow(this.context, {
+      ...params,
+      buttons: [{ title: params.title, onClick: params.onClick }],
+    });
+    this.#addRow(row, row.metadata);
+    const api = new ButtonApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /** Adds actions in one inline composition. A title match keeps the complete row together. */
+  addButtons(params: ButtonsParams): ButtonsApi {
+    const row = new ButtonRow(this.context, params);
+    this.#addRow(row, row.metadata);
+    const api = new ButtonsApi(row, this.context);
     this.#children.push(api);
     return api;
   }

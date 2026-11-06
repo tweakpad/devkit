@@ -43,6 +43,23 @@ The control is inferred from the value; `view` overrides the inference.
 Monitors are devkit's own lightweight rows: `text` writes a single Text node, and `graph` is
 a canvas fed from a Float32Array ring buffer.
 
+Actions use `addButton({ title, onClick })` or an inline composition:
+
+```ts
+scene.addButton({ title: 'Reset scene', onClick: resetScene });
+scene.addButtons({
+  name: 'playback',
+  buttons: [
+    { title: 'Pause', onClick: () => { params.paused = true; } },
+    { title: 'Resume', onClick: () => { params.paused = false; } },
+  ],
+});
+```
+
+Both are supported on panes, folders and tab pages. Inline buttons share one complete search
+boundary: matching either title retains the row. See the [Buttons API](docs/api/buttons.md)
+for all configuration options, returned handles, state changes and disposal behavior.
+
 ## Architecture
 
 ```

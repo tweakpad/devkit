@@ -41,6 +41,19 @@ export const containerStyles = css`
     display: none !important;
   }
 
+  .button-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--tweak-row-gap);
+    min-inline-size: 0;
+  }
+
+  .button-row > tp-button {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
   .row[hidden] {
     display: none;
   }

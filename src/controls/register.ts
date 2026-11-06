@@ -1,5 +1,6 @@
 import {
   defineElement,
+  TpButton,
   TpCheckbox,
   TpColorInput,
   TpInput,
@@ -21,7 +22,16 @@ let registered = false;
 export function registerElements(): void {
   if (registered) return;
   registered = true;
-  for (const control of [TpSlider, TpInput, TpSelect, TpCheckbox, TpSwitch, TpColorInput, TpKbd])
+  for (const control of [
+    TpSlider,
+    TpInput,
+    TpSelect,
+    TpCheckbox,
+    TpSwitch,
+    TpColorInput,
+    TpKbd,
+    TpButton,
+  ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
   for (const element of [TweakPane, TweakFolder, TweakTabs, TweakTabPage])
     if (!customElements.get(element.tagName)) customElements.define(element.tagName, element);

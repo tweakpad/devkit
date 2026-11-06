@@ -36,6 +36,40 @@ const [scene, style, perf] = tabs.pages as [
 
 scene.addBinding(params, 'caption', { label: 'Caption' });
 scene.addBinding(params, 'paused', { label: 'Paused', view: 'switch' });
+const actions = scene.addFolder({ title: 'Actions' });
+actions.addButton({
+  name: 'reset-scene',
+  title: 'Reset scene',
+  onClick: () => {
+    Object.assign(params, {
+      orbs: 24,
+      speed: 0.6,
+      radius: 180,
+      wobble: 0.25,
+      seed: 7,
+      paused: false,
+    });
+    stats.angle = 0;
+  },
+});
+actions.addButtons({
+  name: 'playback',
+  label: 'Playback',
+  buttons: [
+    {
+      title: 'Pause',
+      onClick: () => {
+        params.paused = true;
+      },
+    },
+    {
+      title: 'Resume',
+      onClick: () => {
+        params.paused = false;
+      },
+    },
+  ],
+});
 const motion = scene.addFolder({ title: 'Motion' });
 motion.addBinding(params, 'orbs', { label: 'Orbs', min: 1, max: 200, step: 1 });
 motion.addBinding(params, 'speed', { label: 'Speed', min: 0, max: 4, step: 0.01 });

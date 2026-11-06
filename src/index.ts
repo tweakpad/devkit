@@ -11,6 +11,14 @@ export {
   type TabsParams,
 } from './api/container.js';
 export type { BindingParams, ControlKind, OptionList } from './api/factory.js';
+export {
+  ButtonActionApi,
+  ButtonApi,
+  ButtonsApi,
+  type ButtonActionParams,
+  type ButtonParams,
+  type ButtonsParams,
+} from './api/buttons.js';
 export type { ChangeEvent, ChangeListener } from './core/binding.js';
 export { Scheduler, type FrameStats, type SchedulerOptions } from './core/scheduler.js';
 export { registerElements } from './controls/register.js';
