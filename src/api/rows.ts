@@ -1,7 +1,5 @@
 import type { Binding } from '../core/binding.js';
-import type { LibraryView } from '../controls/library-view.js';
-import type { TextMonitorView } from '../monitors/text-monitor.js';
-import type { GraphMonitor } from '../monitors/graph-monitor.js';
+import type { ControlView } from '../controls/library-view.js';
 import type { MountableRow, PaneContext, Row } from './context.js';
 
 /**
@@ -109,7 +107,7 @@ export class ControlRow<T> extends SearchableRow implements MountableRow {
   constructor(
     private readonly context: PaneContext,
     readonly binding: Binding<T>,
-    readonly view: LibraryView<T>,
+    readonly view: ControlView<T>,
     private readonly label: string,
   ) {
     super(document.createElement('div'));
@@ -165,41 +163,5 @@ export class ControlRow<T> extends SearchableRow implements MountableRow {
     label.className = 'label';
     label.textContent = this.label;
     this.surface.replaceChildren(label);
-  }
-}
-
-/** A text monitor: cheap DOM, sampled only while its complete row is on screen. */
-export class TextMonitorRow extends SearchableRow {
-  constructor(
-    readonly binding: Binding<unknown>,
-    readonly view: TextMonitorView,
-  ) {
-    super(view.element);
-    binding.attach(view);
-  }
-
-  protected override syncVisibility(visible: boolean): void {
-    this.binding.setVisible(visible);
-  }
-
-  override dispose(): void {
-    this.binding.dispose();
-    super.dispose();
-  }
-}
-
-/** A graph monitor: samples all the time, draws only while its complete row is on screen. */
-export class GraphMonitorRow extends SearchableRow {
-  constructor(readonly monitor: GraphMonitor) {
-    super(monitor.element);
-  }
-
-  protected override syncVisibility(visible: boolean): void {
-    this.monitor.setVisible(visible);
-  }
-
-  override dispose(): void {
-    this.monitor.dispose();
-    super.dispose();
   }
 }

@@ -13,6 +13,14 @@ interface ValueChangeDetail {
   value: unknown;
 }
 
+/** Shared view lifecycle for every binding control, including passive displays. */
+export interface ControlView<T> extends BindingView<T> {
+  mount(row: HTMLElement, disabled: boolean): void;
+  unmount(): void;
+  setDisabled(disabled: boolean): void;
+  setVisible(visible: boolean): void;
+}
+
 /**
  * A binding shown by one @tweakpad/ui inline control, in controlled mode: the element's value is
  * set before its first update, and each proposal it makes is echoed back synchronously, as the
@@ -22,7 +30,7 @@ interface ValueChangeDetail {
  * real cost (the library's update runs presentation work every time) instead of deferring it to
  * a microtask after the budget check.
  */
-export abstract class LibraryView<T> implements BindingView<T> {
+export abstract class LibraryView<T> implements ControlView<T> {
   readonly heavy = true;
   protected el: LibraryElement | null = null;
   #releaseLock: (() => void) | null = null;

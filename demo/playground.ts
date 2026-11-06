@@ -106,9 +106,16 @@ style.addBinding(params, 'blend', {
 });
 style.addBinding(params, 'trails', { label: 'Trails' });
 
-perf.addMonitor(stats, 'fps', { label: 'FPS', view: 'graph', min: 0, max: 144, precision: 0 });
-perf.addMonitor(stats, 'frameMs', { label: 'Frame (ms)', precision: 2 });
-perf.addMonitor(stats, 'angle', { label: 'Angle', precision: 3, interval: 0 });
+perf.addBinding(stats, 'fps', {
+  label: 'FPS',
+  view: 'monitor',
+  monitor: { view: 'graph' },
+  min: 0,
+  max: 144,
+  precision: 0,
+});
+perf.addBinding(stats, 'frameMs', { view: 'monitor', label: 'Frame (ms)', precision: 2 });
+perf.addBinding(stats, 'angle', { view: 'monitor', label: 'Angle', precision: 3, interval: 0 });
 
 Object.assign(window, { pane, params, stats });
 

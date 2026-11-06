@@ -55,6 +55,47 @@ function setup(budget = 2) {
 }
 
 describe('Scheduler + Binding', () => {
+  it('uses the same programmatic writes and events for read-only control views', () => {
+    const { frames, scheduler } = setup();
+    const target = { value: 1 };
+    const binding = new Binding<number>(scheduler, target, 'value', { readonly: true });
+    const view = new RecordingView<number>();
+    const finished: number[] = [];
+    binding.attach(view);
+    binding.setVisible(true);
+    binding.on('finish', (event) => finished.push(event.value));
+    binding.propose(2);
+    expect(target.value).toBe(1);
+    binding.set(3);
+    frames.step();
+    expect(target.value).toBe(3);
+    expect(view.writes).toEqual([1, 3]);
+    expect(finished).toEqual([3]);
+  });
+
+  it('can deliver equal-valued history samples through normal intervals and visibility', () => {
+    const { frames, scheduler } = setup();
+    const binding = new Binding<number>(scheduler, { value: 60 }, 'value', {
+      equals: () => false,
+      interval: 32,
+      readonly: true,
+    });
+    const view = new RecordingView<number>();
+    binding.attach(view);
+    binding.setVisible(true);
+    frames.step();
+    frames.step();
+    frames.step();
+    expect(view.writes).toEqual([60, 60, 60]);
+    binding.setVisible(false);
+    frames.step(100);
+    expect(view.writes).toHaveLength(3);
+    expect(scheduler.activeCount).toBe(0);
+    binding.refresh();
+    frames.step();
+    expect(view.writes).toHaveLength(4);
+  });
+
   it('writes only values that changed', () => {
     const { frames, scheduler } = setup();
     const target = { a: 1, b: 2 };

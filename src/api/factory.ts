@@ -7,7 +7,8 @@ import {
   type ColorObjectType,
   type ColorPickerMode,
 } from '../controls/color.js';
-import type { LibraryView } from '../controls/library-view.js';
+import type { ControlView } from '../controls/library-view.js';
+import { MonitorView, type MonitorOptions } from '../controls/monitor-view.js';
 import {
   BooleanView,
   ColorView,
@@ -20,7 +21,8 @@ import {
 } from '../controls/views.js';
 import type { PaneContext } from './context.js';
 
-export type ControlKind = 'slider' | 'number' | 'text' | 'checkbox' | 'switch' | 'select' | 'color';
+export type ControlKind =
+  'slider' | 'number' | 'text' | 'checkbox' | 'switch' | 'select' | 'color' | 'monitor';
 
 export type OptionList =
   | Record<string, unknown>
@@ -49,6 +51,8 @@ export interface BindingParams {
   options?: OptionList;
   /** Color handling: object channel range, string notation, alpha. */
   color?: ColorBindingParams;
+  /** Presentation options when view is 'monitor'; other binding options stay the same. */
+  monitor?: MonitorOptions;
   /** Sampling interval in ms for this binding; 0 every frame, -1 only on refresh(). */
   interval?: number;
   disabled?: boolean;
@@ -85,7 +89,7 @@ export function inferKind(value: unknown, params: BindingParams): ControlKind {
 
 export interface CreatedControl {
   binding: Binding<unknown>;
-  view: LibraryView<unknown>;
+  view: ControlView<unknown>;
   kind: ControlKind;
 }
 
@@ -104,11 +108,26 @@ export function createControl(
   const make = <T>(equals?: Equals<T>, codec?: ValueCodec<T>): Binding<T> =>
     new Binding<T>(scheduler, target, key, {
       interval,
+      readonly: kind === 'monitor',
       ...(equals ? { equals } : {}),
       ...(codec ? { codec } : {}),
     });
 
   switch (kind) {
+    case 'monitor': {
+      const graph = params.monitor?.view === 'graph';
+      if (graph && typeof raw !== 'number')
+        throw new TypeError('devkit: graph views require a numeric binding');
+      const binding = make<unknown>(graph ? () => false : undefined);
+      const view = new MonitorView(
+        label,
+        params.monitor ?? {},
+        params.precision ?? 2,
+        params.min,
+        params.max,
+      );
+      return { binding, view, kind };
+    }
     case 'slider':
     case 'number': {
       const spec = {

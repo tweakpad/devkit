@@ -1,4 +1,4 @@
-import { Binding, type ChangeListener } from '../core/binding.js';
+import type { Binding, ChangeListener } from '../core/binding.js';
 import {
   filterSearchTree,
   type SearchGroupNode,
@@ -8,11 +8,9 @@ import {
 } from '../core/search.js';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
-import { GraphMonitor } from '../monitors/graph-monitor.js';
-import { TextMonitorView } from '../monitors/text-monitor.js';
 import { Chunk, CHUNK_SIZE, type PaneContext, type Row } from './context.js';
 import { createControl, type BindingParams, type ControlKind } from './factory.js';
-import { ControlRow, GraphMonitorRow, TextMonitorRow } from './rows.js';
+import { ControlRow } from './rows.js';
 import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
 import {
   InlineRow,
@@ -22,22 +20,6 @@ import {
   type InlineRowParams,
   type ValidatedInlineItems,
 } from './inline.js';
-
-export interface MonitorParams {
-  label?: string;
-  /** `text` shows the value; `graph` plots a number over time. */
-  view?: 'text' | 'graph';
-  /** Milliseconds between samples. Defaults: text 100, graph 32. */
-  interval?: number;
-  /** Decimals shown for numbers. Default 2. */
-  precision?: number;
-  /** Graph range; derived from the samples when omitted. */
-  min?: number;
-  max?: number;
-  /** Graph samples kept. Default 64. */
-  bufferSize?: number;
-  hidden?: boolean;
-}
 
 export interface FolderParams {
   title: string;
@@ -95,40 +77,6 @@ export class ContainerApi {
     return api;
   }
 
-  /** Shows `target[key]` read-only, as text or as a graph over time. */
-  addMonitor<T extends object, K extends keyof T & PropertyKey>(
-    target: T,
-    key: K,
-    params: MonitorParams = {},
-  ): MonitorApi {
-    const label = params.label ?? String(key);
-    const precision = params.precision ?? 2;
-    let row: TextMonitorRow | GraphMonitorRow;
-    if (params.view === 'graph') {
-      const monitor = new GraphMonitor(this.context.scheduler, target, key, {
-        label,
-        min: params.min,
-        max: params.max,
-        bufferSize: params.bufferSize ?? 64,
-        interval: params.interval ?? 32,
-        precision,
-      });
-      row = new GraphMonitorRow(monitor);
-    } else {
-      const binding = new Binding<unknown>(this.context.scheduler, target, key, {
-        interval: params.interval ?? 100,
-        readonly: true,
-      });
-      this.context.bindings.add(binding);
-      row = new TextMonitorRow(binding, new TextMonitorView(label, precision));
-    }
-    if (params.hidden) row.setHidden(true);
-    this.#addRow(row, { name: String(key), label });
-    const api = new MonitorApi(row, this.context);
-    this.#children.push(api);
-    return api;
-  }
-
   /** Adds one action using the library Button. Search matches its name and current title. */
   addButton(params: ButtonParams): ButtonApi {
     const row = new ButtonRow(this.context, params);
@@ -162,9 +110,7 @@ export class ContainerApi {
         const api =
           item.type === 'button'
             ? content.addButton(item)
-            : item.type === 'binding'
-              ? content.addBinding(item.target, item.key as never, item)
-              : content.addMonitor(item.target, item.key as never, item);
+            : content.addBinding(item.target, item.key as never, item);
         api.element.style.flex = item.width === 'auto' ? '0 0 auto' : `${item.width ?? 1} 1 0`;
         return api;
       });
@@ -392,33 +338,6 @@ export class BindingApi<T> {
 
   dispose(): void {
     this.context.bindings.delete(this.binding as Binding<unknown>);
-    this.row.dispose();
-    this.context.refreshSearch?.();
-  }
-}
-
-/** The handle `addMonitor` returns. */
-export class MonitorApi {
-  constructor(
-    private readonly row: TextMonitorRow | GraphMonitorRow,
-    private readonly context: PaneContext,
-  ) {}
-
-  get hidden(): boolean {
-    return this.row.hidden;
-  }
-
-  set hidden(hidden: boolean) {
-    this.row.setHidden(hidden);
-    this.context.refreshSearch?.();
-  }
-
-  get element(): HTMLElement {
-    return this.row.element;
-  }
-
-  dispose(): void {
-    if (this.row instanceof TextMonitorRow) this.context.bindings.delete(this.row.binding);
     this.row.dispose();
     this.context.refreshSearch?.();
   }

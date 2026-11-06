@@ -1,4 +1,3 @@
-import type { Sampler, Scheduler, Writer } from '../core/scheduler.js';
 import { formatValue } from './text-monitor.js';
 
 export interface GraphOptions {
@@ -7,31 +6,18 @@ export interface GraphOptions {
   max?: number | undefined;
   /** Samples kept; one sample per interval. */
   bufferSize: number;
-  /** Milliseconds between samples; 0 samples every frame. */
-  interval: number;
   precision: number;
 }
 
-/**
- * A number over time. It keeps sampling into a fixed Float32Array ring while its row is off
- * screen (opening a folder shows recent history), and draws only while on screen.
- */
-export class GraphMonitor implements Sampler, Writer {
-  slot = -1;
-  queued = false;
-  readonly heavy = false;
+/** Passive numeric history view. The owning Binding supplies samples and visibility. */
+export class GraphMonitorView {
   readonly element: HTMLDivElement;
 
-  readonly #target: Record<PropertyKey, unknown>;
-  readonly #key: PropertyKey;
-  readonly #scheduler: Scheduler;
   readonly #options: GraphOptions;
   readonly #history: Float32Array;
   #head = 0;
   #count = 0;
-  #due = 0;
   #visible = false;
-  #last = NaN;
   readonly #canvas: HTMLCanvasElement;
   readonly #context: CanvasRenderingContext2D | null;
   readonly #valueText: Text;
@@ -41,10 +27,7 @@ export class GraphMonitor implements Sampler, Writer {
   #stroke = 'currentColor';
   #resize: ResizeObserver | null = null;
 
-  constructor(scheduler: Scheduler, target: object, key: PropertyKey, options: GraphOptions) {
-    this.#scheduler = scheduler;
-    this.#target = target as Record<PropertyKey, unknown>;
-    this.#key = key;
+  constructor(options: GraphOptions) {
     this.#options = options;
     this.#history = new Float32Array(Math.max(2, options.bufferSize));
 
@@ -64,7 +47,6 @@ export class GraphMonitor implements Sampler, Writer {
     this.#context = this.#canvas.getContext('2d');
     row.append(head, this.#canvas);
     this.element = row;
-    scheduler.activate(this);
   }
 
   setVisible(visible: boolean): void {
@@ -72,30 +54,20 @@ export class GraphMonitor implements Sampler, Writer {
     this.#visible = visible;
     if (visible) {
       this.#observeSize();
-      this.#scheduler.enqueueWrite(this);
+      this.#draw();
     }
   }
 
-  sample(now: number): void {
-    if (this.#options.interval > 0) {
-      if (now < this.#due) return;
-      this.#due = now + this.#options.interval;
-    }
-    const value = Number(this.#target[this.#key]);
-    this.#history[this.#head] = value;
+  write(value: unknown): void {
+    const sample = Number(value);
+    this.#history[this.#head] = sample;
     this.#head = (this.#head + 1) % this.#history.length;
     if (this.#count < this.#history.length) this.#count++;
-    this.#last = value;
-    if (this.#visible) this.#scheduler.enqueueWrite(this);
-  }
-
-  write(): void {
-    this.#valueText.data = formatValue(this.#last, this.#options.precision);
-    this.#draw();
+    this.#valueText.data = formatValue(sample, this.#options.precision);
+    if (this.#visible) this.#draw();
   }
 
   dispose(): void {
-    this.#scheduler.deactivate(this);
     this.#resize?.disconnect();
     this.#resize = null;
   }

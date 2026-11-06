@@ -35,7 +35,7 @@ export interface PaneOptions {
  * const pane = new Pane({ title: 'Scene' });
  * const camera = pane.addFolder({ title: 'Camera' });
  * camera.addBinding(params, 'fov', { min: 10, max: 120, step: 1 });
- * pane.addMonitor(stats, 'fps', { view: 'graph', min: 0, max: 120 });
+ * pane.addBinding(stats, 'fps', { view: 'monitor', monitor: { view: 'graph' }, min: 0, max: 120 });
  * ```
  */
 export class Pane extends ContainerApi {

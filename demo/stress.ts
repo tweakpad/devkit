@@ -53,12 +53,27 @@ for (let i = 0; i < TOTAL; i++) {
 // A second pane: what the stress costs.
 const meter = { fps: 0, schedulerMs: 0, active: 0, mounted: 0, deferred: 0, heavy: 0 };
 const monitor = new Pane({ title: 'Meter', anchor: 'bottom-left', refresh: 'frame' });
-monitor.addMonitor(meter, 'fps', { label: 'FPS', view: 'graph', min: 0, max: 130, precision: 0 });
-monitor.addMonitor(meter, 'schedulerMs', { label: 'Scheduler (ms/frame)', precision: 3 });
-monitor.addMonitor(meter, 'active', { label: 'Active bindings', precision: 0 });
-monitor.addMonitor(meter, 'mounted', { label: 'Mounted controls', precision: 0 });
-monitor.addMonitor(meter, 'heavy', { label: 'Control writes / frame', precision: 0 });
-monitor.addMonitor(meter, 'deferred', { label: 'Deferred writes', precision: 0 });
+monitor.addBinding(meter, 'fps', {
+  label: 'FPS',
+  view: 'monitor',
+  monitor: { view: 'graph' },
+  min: 0,
+  max: 130,
+  precision: 0,
+});
+monitor.addBinding(meter, 'schedulerMs', {
+  view: 'monitor',
+  label: 'Scheduler (ms/frame)',
+  precision: 3,
+});
+monitor.addBinding(meter, 'active', { view: 'monitor', label: 'Active bindings', precision: 0 });
+monitor.addBinding(meter, 'mounted', { view: 'monitor', label: 'Mounted controls', precision: 0 });
+monitor.addBinding(meter, 'heavy', {
+  view: 'monitor',
+  label: 'Control writes / frame',
+  precision: 0,
+});
+monitor.addBinding(meter, 'deferred', { view: 'monitor', label: 'Deferred writes', precision: 0 });
 
 // The "application": a render loop touching 30 scattered values per frame.
 let mutate = true;

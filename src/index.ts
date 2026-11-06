@@ -3,16 +3,15 @@ export {
   BindingApi,
   ContainerApi,
   FolderApi,
-  MonitorApi,
   TabPageApi,
   TabsApi,
   type FolderParams,
-  type MonitorParams,
   type TabsParams,
 } from './api/container.js';
 export type { BindingParams, ColorBindingParams, ControlKind, OptionList } from './api/factory.js';
 export type { ColorPickerMode, ColorObjectType } from './controls/color.js';
 export type { ColorFormat } from './controls/views.js';
+export type { MonitorOptions } from './controls/monitor-view.js';
 export { ButtonApi, type ButtonParams } from './api/buttons.js';
 export {
   InlineRowApi,
@@ -20,7 +19,6 @@ export {
   type InlineItem,
   type InlineBindingItem,
   type InlineButtonItem,
-  type InlineMonitorItem,
 } from './api/inline.js';
 export type { ChangeEvent, ChangeListener } from './core/binding.js';
 export { Scheduler, type FrameStats, type SchedulerOptions } from './core/scheduler.js';

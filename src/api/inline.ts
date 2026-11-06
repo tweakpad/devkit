@@ -1,5 +1,5 @@
 import type { BindingParams } from './factory.js';
-import type { BindingApi, MonitorApi, MonitorParams } from './container.js';
+import type { BindingApi } from './container.js';
 import type { ButtonApi, ButtonParams } from './buttons.js';
 import type { PaneContext, Row } from './context.js';
 import type { SearchMetadata } from '../core/search.js';
@@ -16,23 +16,15 @@ export type InlineBindingItem = BindingParams &
     target: object;
     key: PropertyKey;
   };
-export type InlineMonitorItem = MonitorParams &
-  InlineSize & {
-    type: 'monitor';
-    target: object;
-    key: PropertyKey;
-  };
 export type InlineButtonItem = ButtonParams & InlineSize & { type: 'button' };
-export type InlineItem = InlineBindingItem | InlineMonitorItem | InlineButtonItem;
+export type InlineItem = InlineBindingItem | InlineButtonItem;
 export type InlineItemApi<T extends InlineItem> = T extends { type: 'button' }
   ? ButtonApi
-  : T extends { type: 'monitor' }
-    ? MonitorApi
-    : T extends { target: infer O; key: infer K }
-      ? K extends keyof O
-        ? BindingApi<O[K]>
-        : never
-      : never;
+  : T extends { target: infer O; key: infer K }
+    ? K extends keyof O
+      ? BindingApi<O[K]>
+      : never
+    : never;
 export type InlineApis<T extends readonly InlineItem[]> = {
   readonly [I in keyof T]: InlineItemApi<T[I]>;
 };

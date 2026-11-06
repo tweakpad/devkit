@@ -24,7 +24,7 @@ const camera = tabs.pages[0].addFolder({ title: 'Lens' });
 camera.addBinding(params, 'fov', { min: 10, max: 120, step: 1 }).on('change', (e) => {});
 camera.addBinding(params, 'mode', { options: { Orbit: 'orbit', Fly: 'fly' } });
 camera.addBinding(params, 'tint', { color: { type: 'float' } }); // {r,g,b} in 0–1
-tabs.pages[1].addMonitor(stats, 'fps', { view: 'graph', min: 0, max: 144 });
+tabs.pages[1].addBinding(stats, 'fps', { view: 'monitor', monitor: { view: 'graph' }, min: 0, max: 144 });
 ```
 
 ## Controls
@@ -40,8 +40,9 @@ The control is inferred from the value; `view` overrides the inference.
 | CSS color string, or `{r,g,b}` | `tp-color-input` inline                                 |
 | string                         | `tp-input` inline                                       |
 
-Monitors are devkit's own lightweight rows: `text` writes a single Text node, and `graph` is
-a canvas fed from a Float32Array ring buffer.
+Monitoring uses ordinary bindings with `view: 'monitor'`. The default text view and optional
+`monitor: { view: 'graph' }` numeric history use the same binding API, row composition,
+visibility and disposal contract as editors. See [monitor bindings](docs/api/monitoring.md).
 
 Color bindings accept `color: { picker: 'native' | 'tweakpad' }`. Set
 `new Pane({ colorPicker: 'tweakpad' })` to change the pane default; individual bindings can

@@ -27,6 +27,7 @@ export interface BindingOptions<T> {
   codec?: ValueCodec<T>;
   /** Milliseconds between samples; 0 samples every frame, -1 only on refresh(). */
   interval?: number;
+  /** Refuses user proposals; programmatic set/refresh still use the normal binding contract. */
   readonly?: boolean;
 }
 
@@ -160,7 +161,11 @@ export class Binding<T> implements Sampler, Writer {
   /** A programmatic value: written to the target and the view, and announced as a final change. */
   set(value: T): void {
     if (this.#disposed) return;
-    this.propose(value, true);
+    this.value = value;
+    this.#assign(value);
+    this.#pendingChange = true;
+    this.#pendingLast = true;
+    this.#scheduler.enqueueNotify(this.notifier);
     if (this.#view) this.#scheduler.enqueueWrite(this);
   }
 

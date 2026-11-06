@@ -57,7 +57,6 @@ Each item declares `type` and accepts these fields:
 | `type` | Fields | Returned item handle |
 | --- | --- | --- |
 | `'binding'` | `target`, `key`, and all `BindingParams` fields, flattened into the declaration | `BindingApi<Target[Key]>` |
-| `'monitor'` | `target`, `key`, and all `MonitorParams` fields, flattened into the declaration | `MonitorApi` |
 | `'button'` | All `ButtonParams` fields, including required `title` and `onClick` | `ButtonApi` |
 
 Every item also accepts `width`. A positive finite number specifies its relative share of
@@ -69,11 +68,15 @@ Invalid empty rows, nonpositive/nonfinite width shares, and missing target keys 
 adding a row. TypeScript checks each key against its target and preserves the item handle tuple.
 The item list is fixed at creation; replace a row by disposing it and declaring another.
 
+To display a value without an editor, declare a normal binding item with `view: 'monitor'`.
+Its optional `monitor: { view: 'graph' }` setting enables numeric history. It still returns
+`BindingApi<Target[Key]>` and uses the same item lifecycle. See [monitor bindings](monitoring.md).
+
 ## Handle and lifecycle
 
 `InlineRowApi` exposes readonly `items` (handles in declaration order), readonly `element`
 (the complete visibility shell), writable `hidden` and `disabled`, and `dispose()`.
-The item handles are the same APIs returned by individual `addBinding`, `addMonitor`, and
+The item handles are the same APIs returned by individual `addBinding` and
 `addButton` calls, including change subscriptions, refresh and disposal where applicable.
 
 Disabling a row composes with each item's authored disabled flag. Re-enabling it preserves
@@ -95,4 +98,4 @@ To search controls independently, declare separate rows/controls. Search preserv
 tab and folder expansion, and hides empty parent panels using eligible composition counts.
 
 Exports: `InlineRowApi`, `InlineRowParams`, `InlineItem`, `InlineBindingItem`,
-`InlineMonitorItem`, and `InlineButtonItem` from `@tweakpad/devkit`.
+and `InlineButtonItem` from `@tweakpad/devkit`.
