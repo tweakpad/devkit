@@ -39,6 +39,7 @@ export interface PaneOptions {
  * ```
  */
 export class Pane extends ContainerApi {
+  protected override readonly supportsVerticalTabs = true;
   readonly element: TweakPane;
 
   constructor(options: PaneOptions = {}) {

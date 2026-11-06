@@ -15,6 +15,11 @@ export const containerStyles = css`
     min-inline-size: 0;
   }
 
+  /* Root tab groups and shared controls use one consistent sibling spacing. */
+  .body:has(> tweak-tabs[orientation='vertical']) {
+    row-gap: var(--tweak-section-gap);
+  }
+
   /* Rows are grouped in chunks: one intersection target each, and skipped by rendering while
      off screen. An intrinsic size keeps the scroll height right while a chunk is skipped. */
   .chunk {

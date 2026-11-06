@@ -7,6 +7,7 @@ export {
   TabsApi,
   type FolderParams,
   type TabsParams,
+  type TabPageParams,
 } from './api/container.js';
 export type { BindingParams, ColorBindingParams, ControlKind, OptionList } from './api/factory.js';
 export type { ColorPickerMode, ColorObjectType } from './controls/color.js';

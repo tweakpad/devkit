@@ -1,6 +1,6 @@
 import { expectTypeOf, it } from 'vitest';
 import type { Pane } from './pane.js';
-import type { BindingApi } from './container.js';
+import type { BindingApi, TabsApi } from './container.js';
 import type { ButtonApi } from './buttons.js';
 
 export function declareMixedRow(pane: Pane) {
@@ -38,3 +38,21 @@ export function rejectInvalidKeys(pane: Pane): void {
   // @ts-expect-error A monitor key must exist on its declared target.
   pane.addRow({ items: [{ type: 'binding', view: 'monitor', target: state, key: 'missing' }] });
 }
+
+export function declareVerticalTabs(pane: Pane) {
+  const icon = { viewBox: '0 0 24 24', paths: [{ d: 'M0 0h24' }] };
+  const vertical = pane.addTabs({
+    orientation: 'vertical',
+    side: 'right',
+    placement: 'inside',
+    pages: [{ title: 'Scene', icon, color: 'var(--tp-primary)', hint: 'Scene settings' }],
+  });
+  vertical.pages[0]!.addTabs({ pages: [{ title: 'Motion' }] });
+  // @ts-expect-error Vertical pages require icons.
+  pane.addTabs({ orientation: 'vertical', pages: [{ title: 'Missing icon' }] });
+  return vertical;
+}
+
+it('preserves the tabs API for vertical groups', () => {
+  expectTypeOf<ReturnType<typeof declareVerticalTabs>>().toEqualTypeOf<TabsApi>();
+});

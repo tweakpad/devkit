@@ -9,6 +9,8 @@ import {
   TpSlider,
   TpSwitch,
   TpTabs,
+  TpIcon,
+  TpTooltip,
 } from '@tweakpad/ui';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakPane } from '../elements/pane.js';
@@ -33,6 +35,8 @@ export function registerElements(): void {
     TpKbd,
     TpButton,
     TpTabs,
+    TpIcon,
+    TpTooltip,
   ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
   for (const element of [TweakPane, TweakFolder, TweakTabs, TweakTabPage])

@@ -1,3 +1,4 @@
+import type { IconDefinition } from '@tweakpad/ui';
 import type { Binding, ChangeListener } from '../core/binding.js';
 import {
   filterSearchTree,
@@ -26,10 +27,22 @@ export interface FolderParams {
   expanded?: boolean;
 }
 
-export interface TabsParams {
-  pages: { title: string }[];
-  selected?: number;
+export interface TabPageParams {
+  title: string;
+  icon?: IconDefinition;
+  color?: string;
+  hint?: string;
 }
+
+export type TabsParams = { selected?: number } & (
+  | { orientation?: 'horizontal'; pages: TabPageParams[] }
+  | {
+      orientation: 'vertical';
+      side?: 'auto' | 'left' | 'right';
+      placement?: 'inside' | 'outside';
+      pages: (TabPageParams & { icon: IconDefinition })[];
+    }
+);
 
 interface Disposable {
   dispose(): void;
@@ -37,6 +50,7 @@ interface Disposable {
 
 /** Shared by the pane, folders and tab pages: anything rows, folders and tabs can go into. */
 export class ContainerApi {
+  protected readonly supportsVerticalTabs: boolean = false;
   #chunk: Chunk | null = null;
   readonly #chunks: Chunk[] = [];
   readonly #children: Disposable[] = [];
@@ -151,7 +165,16 @@ export class ContainerApi {
   }
 
   addTabs(params: TabsParams): TabsApi {
+    const vertical = params.orientation === 'vertical';
+    if (vertical && !this.supportsVerticalTabs)
+      throw new Error('devkit: vertical tabs are supported only at the pane root');
+    if (vertical && params.pages.some((page) => !page.icon))
+      throw new Error('devkit: vertical tabs require icons');
     const element = document.createElement(TweakTabs.tagName) as TweakTabs;
+    element.orientation = params.orientation ?? 'horizontal';
+    element.side = vertical ? (params.side ?? 'auto') : 'auto';
+    element.placement = vertical ? (params.placement ?? 'outside') : 'outside';
+    element.pageOptions = params.pages;
     element.labels = params.pages.map((page) => page.title);
     element.selected = params.selected ?? 0;
     const pages = params.pages.map(() => {

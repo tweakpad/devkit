@@ -41,7 +41,7 @@ export class TweakFolder extends LitElement {
         inline-size: 100%;
         min-block-size: var(--tp-control-height-xs);
         padding-inline: var(--tp-space-1);
-        border-radius: var(--tp-radius-md);
+        border-radius: var(--tp-radius-lg);
         font-size: var(--tp-text-xs);
         font-weight: var(--tp-font-medium);
         letter-spacing: var(--tp-tracking-wide);
