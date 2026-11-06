@@ -7,6 +7,8 @@ export interface Row extends SearchTarget {
   readonly element: HTMLElement;
   readonly searchVisible: boolean;
   setVisible(visible: boolean): void;
+  setParentDisabled(disabled: boolean): void;
+  setParentHidden(hidden: boolean): void;
   dispose(): void;
 }
 

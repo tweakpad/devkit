@@ -2,6 +2,8 @@
 export interface SearchMetadata {
   readonly name: string;
   readonly label: string;
+  /** Additional authored identities belonging to the same atomic composition. */
+  readonly terms?: readonly string[];
 }
 
 /** The owner of an atomic control's visibility, including every part of a composed control. */
@@ -43,9 +45,11 @@ export function filterSearchTree(root: SearchNode, query: string): number {
   function visit(node: SearchNode): number {
     if (node.kind === 'control') {
       if (node.target.disposed) return 0;
-      const matches = [node.metadata.name, node.metadata.label].some((term) =>
-        term.toLocaleLowerCase().includes(normalized),
-      );
+      const matches = [
+        node.metadata.name,
+        node.metadata.label,
+        ...(node.metadata.terms ?? []),
+      ].some((term) => term.toLocaleLowerCase().includes(normalized));
       node.target.setFiltered(!matches);
       return matches && !node.target.hidden ? 1 : 0;
     }

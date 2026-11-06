@@ -14,6 +14,9 @@ export abstract class SearchableRow implements Row {
   #filtered = false;
   #visible = false;
   #disposed = false;
+  #disabled = false;
+  #parentDisabled = false;
+  #parentHidden = false;
 
   constructor(protected readonly surface: HTMLElement) {
     this.element = document.createElement('div');
@@ -31,7 +34,27 @@ export abstract class SearchableRow implements Row {
 
   /** Search eligibility does not depend on mounting, intersection, tabs or folder expansion. */
   get searchVisible(): boolean {
-    return !this.#hidden && !this.#filtered && !this.#disposed;
+    return !this.hidden && !this.#filtered && !this.#disposed && !this.#parentHidden;
+  }
+
+  setParentHidden(hidden: boolean): void {
+    this.#parentHidden = hidden;
+    this.#sync();
+  }
+
+  get disabled(): boolean {
+    return this.#disabled;
+  }
+  get effectiveDisabled(): boolean {
+    return this.#disabled || this.#parentDisabled;
+  }
+  setDisabled(disabled: boolean): void {
+    this.#disabled = disabled;
+    this.syncDisabled(this.effectiveDisabled);
+  }
+  setParentDisabled(disabled: boolean): void {
+    this.#parentDisabled = disabled;
+    this.syncDisabled(this.effectiveDisabled);
   }
 
   get visible(): boolean {
@@ -60,6 +83,11 @@ export abstract class SearchableRow implements Row {
 
   protected abstract syncVisibility(visible: boolean): void;
 
+  protected syncDisabled(disabled: boolean): void {
+    // Passive monitor surfaces have no editable disabled state.
+    void disabled;
+  }
+
   #sync(): void {
     this.element.hidden = !this.searchVisible;
     this.syncVisibility(this.visible);
@@ -70,7 +98,6 @@ export abstract class SearchableRow implements Row {
 export class ControlRow<T> extends SearchableRow implements MountableRow {
   queued = false;
   #mounted = false;
-  #disabled = false;
 
   constructor(
     private readonly context: PaneContext,
@@ -86,8 +113,7 @@ export class ControlRow<T> extends SearchableRow implements MountableRow {
     return this.#mounted;
   }
 
-  setDisabled(disabled: boolean): void {
-    this.#disabled = disabled;
+  protected override syncDisabled(disabled: boolean): void {
     this.view.setDisabled(disabled);
     this.element.toggleAttribute('data-disabled', disabled);
   }
@@ -97,7 +123,7 @@ export class ControlRow<T> extends SearchableRow implements MountableRow {
     if (this.disposed || this.#mounted || !this.visible) return;
     this.binding.value = this.binding.read();
     this.surface.className = 'row';
-    this.view.mount(this.surface, this.#disabled);
+    this.view.mount(this.surface, this.effectiveDisabled);
     this.binding.attach(this.view);
     this.#mounted = true;
     this.context.mounted(this);

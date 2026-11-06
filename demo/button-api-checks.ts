@@ -19,17 +19,19 @@ export async function checkButtonApi(): Promise<string[]> {
         events.push('reset');
       },
     });
-    const pair = folder.addButtons({
+    const pair = folder.addRow({
       name: 'playback',
       label: 'Transport',
-      buttons: [
+      items: [
         {
+          type: 'button',
           title: 'Start',
           onClick: () => {
             events.push('start');
           },
         },
         {
+          type: 'button',
           title: 'Stop',
           disabled: true,
           onClick: () => {
@@ -63,7 +65,7 @@ export async function checkButtonApi(): Promise<string[]> {
       'API lays out equal-width inline actions',
     );
     check(
-      pane.filter('stop') === 1 && !pair.element.hidden && single.element.hidden,
+      pane.filter('stop') === 1 && !pair.element.hidden && single.element.hidden === true,
       'either action title keeps exactly one complete composed row',
     );
     check(
@@ -73,7 +75,7 @@ export async function checkButtonApi(): Promise<string[]> {
     singleButton.click();
     check(events.length === 2, 'filtered single action does not activate');
     check(
-      pane.filter('reset-state') === 1 && pair.element.hidden,
+      pane.filter('reset-state') === 1 && pair.element.hidden === true,
       'stable action name participates in search',
     );
     check(
@@ -83,37 +85,44 @@ export async function checkButtonApi(): Promise<string[]> {
     check(pane.filter('transport') === 1, 'inline row label participates in search');
     pane.filter('');
     pair.disabled = true;
+    await Promise.all(pairButtons.map((button) => button.updateComplete));
     pairButtons[0]!.click();
     check(events.length === 2, 'row-level disabling blocks every action');
     pair.disabled = false;
+    await Promise.all(pairButtons.map((button) => button.updateComplete));
     check(
       !pairButtons[0]!.disabled && pairButtons[1]!.disabled,
       'row re-enable preserves individually disabled actions',
     );
-    pair.buttons[1]!.disabled = false;
+    pair.items[1]!.disabled = false;
+    await pairButtons[1]!.updateComplete;
     pairButtons[1]!.click();
     check(events.at(-1) === 'stop', 'individual actions can be enabled through the API');
     single.disabled = true;
+    await singleButton.updateComplete;
     singleButton.click();
     check(events.length === 3, 'single-button disabled handle blocks activation');
     single.disabled = false;
     single.title = 'Restart';
-    pair.buttons[0]!.title = 'Play';
+    pair.items[0]!.title = 'Begin animation';
     check(
       pane.filter('restart') === 1 && single.title === 'Restart',
       'single-button title updates its search identity',
     );
     check(
-      pane.filter('play') === 1 && pair.buttons[0]!.title === 'Play',
+      pane.filter('begin') === 1 && pair.items[0]!.title === 'Begin animation',
       'inline action title updates composed search identity',
     );
     pair.hidden = true;
     check(
-      pane.filter('play') === 0 && folder.element.hidden,
+      pane.filter('begin') === 0 && folder.element.hidden === true,
       'hidden composed actions cannot keep parents visible',
     );
     pane.filter('');
-    check(pair.hidden && pair.element.hidden, 'clear preserves authored button-row hiding');
+    check(
+      pair.hidden && pair.element.hidden === true,
+      'clear preserves authored button-row hiding',
+    );
     pair.hidden = false;
     pair.dispose();
     pairButtons[0]!.click();

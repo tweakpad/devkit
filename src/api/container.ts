@@ -13,13 +13,15 @@ import { TextMonitorView } from '../monitors/text-monitor.js';
 import { Chunk, CHUNK_SIZE, type PaneContext, type Row } from './context.js';
 import { createControl, type BindingParams, type ControlKind } from './factory.js';
 import { ControlRow, GraphMonitorRow, TextMonitorRow } from './rows.js';
+import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
 import {
-  ButtonApi,
-  ButtonRow,
-  ButtonsApi,
-  type ButtonParams,
-  type ButtonsParams,
-} from './buttons.js';
+  InlineRow,
+  InlineRowApi,
+  type InlineApis,
+  type InlineItem,
+  type InlineRowParams,
+  type ValidatedInlineItems,
+} from './inline.js';
 
 export interface MonitorParams {
   label?: string;
@@ -58,11 +60,13 @@ export class ContainerApi {
   readonly #children: Disposable[] = [];
   readonly #searchChildren = new Set<SearchNode>();
   readonly searchNode: SearchScopeNode | SearchGroupNode;
+  readonly #inlineEntries: { row: Row; metadata: SearchMetadata }[] = [];
 
   constructor(
     protected readonly context: PaneContext,
     protected readonly body: HTMLElement,
     setFiltered?: (filtered: boolean) => void,
+    private readonly inline = false,
   ) {
     this.searchNode = setFiltered
       ? { kind: 'group', children: this.#searchChildren, hideWhenEmpty: 'searching', setFiltered }
@@ -127,23 +131,65 @@ export class ContainerApi {
 
   /** Adds one action using the library Button. Search matches its name and current title. */
   addButton(params: ButtonParams): ButtonApi {
-    const row = new ButtonRow(this.context, {
-      ...params,
-      buttons: [{ title: params.title, onClick: params.onClick }],
-    });
+    const row = new ButtonRow(this.context, params);
     this.#addRow(row, row.metadata);
     const api = new ButtonApi(row, this.context);
     this.#children.push(api);
     return api;
   }
 
-  /** Adds actions in one inline composition. A title match keeps the complete row together. */
-  addButtons(params: ButtonsParams): ButtonsApi {
-    const row = new ButtonRow(this.context, params);
-    this.#addRow(row, row.metadata);
-    const api = new ButtonsApi(row, this.context);
-    this.#children.push(api);
-    return api;
+  /** Composes supported controls into one inline row and one complete search boundary. */
+  addRow<const T extends readonly InlineItem[]>(
+    params: InlineRowParams<T> & { items: ValidatedInlineItems<T> },
+  ): InlineRowApi<T> {
+    if (params.items.length === 0)
+      throw new RangeError('devkit: an inline row needs at least one item');
+    for (const item of params.items) {
+      if (
+        item.width !== undefined &&
+        item.width !== 'auto' &&
+        (!Number.isFinite(item.width) || item.width <= 0)
+      )
+        throw new RangeError('devkit: row item width must be auto or a positive finite share');
+      if (item.type !== 'button' && !(item.key in item.target))
+        throw new TypeError(`devkit: row binding key ${String(item.key)} does not exist`);
+    }
+    const surface = document.createElement('div');
+    surface.className = 'inline-row';
+    const content = new ContainerApi(this.context, surface, undefined, true);
+    try {
+      const items = params.items.map((item) => {
+        const api =
+          item.type === 'button'
+            ? content.addButton(item)
+            : item.type === 'binding'
+              ? content.addBinding(item.target, item.key as never, item)
+              : content.addMonitor(item.target, item.key as never, item);
+        api.element.style.flex = item.width === 'auto' ? '0 0 auto' : `${item.width ?? 1} 1 0`;
+        return api;
+      });
+      const row = new InlineRow(
+        surface,
+        {
+          entries: content.#inlineEntries,
+          setVisible: (visible) => {
+            for (const { row } of content.#inlineEntries) row.setVisible(visible);
+          },
+          setParentDisabled: (disabled) => {
+            for (const { row } of content.#inlineEntries) row.setParentDisabled(disabled);
+          },
+          dispose: () => content.dispose(),
+        },
+        params,
+      );
+      this.#addRow(row, row.metadata);
+      const api = new InlineRowApi<T>(row, items as InlineApis<T>, this.context);
+      this.#children.push(api);
+      return api;
+    } catch (error) {
+      content.dispose();
+      throw error;
+    }
   }
 
   addFolder(params: FolderParams): FolderApi {
@@ -186,6 +232,7 @@ export class ContainerApi {
     for (const child of this.#children) child.dispose();
     this.#children.length = 0;
     this.#searchChildren.clear();
+    this.#inlineEntries.length = 0;
     for (const chunk of this.#chunks) {
       this.context.unobserve(chunk);
       chunk.element.remove();
@@ -195,6 +242,11 @@ export class ContainerApi {
   }
 
   #addRow(row: Row, metadata: SearchMetadata): void {
+    if (this.inline) {
+      this.#inlineEntries.push({ row, metadata });
+      this.body.append(row.element);
+      return;
+    }
     let chunk = this.#chunk;
     if (!chunk || chunk.rows.length >= CHUNK_SIZE) {
       chunk = new Chunk();
@@ -307,7 +359,7 @@ export class BindingApi<T> {
   }
 
   get disabled(): boolean {
-    return this.row.element.hasAttribute('data-disabled');
+    return this.row.disabled;
   }
 
   set disabled(disabled: boolean) {

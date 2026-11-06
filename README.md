@@ -46,8 +46,15 @@ a canvas fed from a Float32Array ring buffer.
 Actions use `addButton({ title, onClick })` or an inline composition:
 
 ```ts
-scene.addButton({ title: 'Reset scene', onClick: resetScene });
-scene.addButtons({
+const actions = pane.addFolder({ title: 'Actions' });
+actions.addButton({
+  title: 'Reset scene',
+  onClick: () => {
+    params.speed = 0.6;
+    params.paused = false;
+  },
+});
+actions.addButtons({
   name: 'playback',
   buttons: [
     { title: 'Pause', onClick: () => { params.paused = true; } },

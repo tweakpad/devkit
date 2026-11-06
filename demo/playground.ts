@@ -52,17 +52,19 @@ actions.addButton({
     stats.angle = 0;
   },
 });
-actions.addButtons({
+actions.addRow({
   name: 'playback',
   label: 'Playback',
-  buttons: [
+  items: [
     {
+      type: 'button',
       title: 'Pause',
       onClick: () => {
         params.paused = true;
       },
     },
     {
+      type: 'button',
       title: 'Resume',
       onClick: () => {
         params.paused = false;
@@ -72,7 +74,20 @@ actions.addButtons({
 });
 const motion = scene.addFolder({ title: 'Motion' });
 motion.addBinding(params, 'orbs', { label: 'Orbs', min: 1, max: 200, step: 1 });
-motion.addBinding(params, 'speed', { label: 'Speed', min: 0, max: 4, step: 0.01 });
+motion.addRow({
+  name: 'speed-control',
+  items: [
+    { type: 'binding', target: params, key: 'speed', label: 'Speed', min: 0, max: 4, step: 0.01 },
+    {
+      type: 'button',
+      title: 'Reset',
+      width: 'auto',
+      onClick: () => {
+        params.speed = 0.6;
+      },
+    },
+  ],
+});
 motion.addBinding(params, 'radius', { label: 'Radius', min: 20, max: 400, step: 1 });
 motion.addBinding(params, 'wobble', { label: 'Wobble', min: 0, max: 1, step: 0.01 });
 motion.addBinding(params, 'seed', { label: 'Seed', step: 1 });
