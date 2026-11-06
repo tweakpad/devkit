@@ -75,12 +75,21 @@ export class TweakFolder extends LitElement {
       .content {
         display: grid;
         grid-template-rows: 0fr;
-        transition: grid-template-rows calc(var(--tp-duration-normal) * var(--tp-motion-scale, 1))
-          var(--tp-easing-standard);
+        opacity: 0;
+        transition:
+          grid-template-rows calc(var(--tp-duration-normal) * var(--tp-motion-scale, 1))
+            var(--tp-easing-standard),
+          opacity calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
+            var(--tp-easing-standard);
       }
 
       :host([open]) .content {
         grid-template-rows: 1fr;
+        opacity: 1;
+        transition-duration:
+          calc(var(--tp-duration-normal) * var(--tp-motion-scale, 1)),
+          calc(var(--tp-duration-slow) * var(--tp-motion-scale, 1));
+        transition-timing-function: var(--tp-easing-standard), linear;
       }
 
       .inner {
@@ -125,9 +134,7 @@ export class TweakFolder extends LitElement {
         content: '';
         position: absolute;
         inset-block-end: 0;
-        inset-inline-start: calc(
-          var(--tp-space-1) + var(--tweak-folder-chevron-size) / 2 - 0.5px
-        );
+        inset-inline-start: calc(var(--tp-space-1) + var(--tweak-folder-chevron-size) / 2 - 0.5px);
         inline-size: 1px;
         block-size: 1px;
         background: var(--tp-muted-foreground);
