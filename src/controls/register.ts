@@ -8,6 +8,7 @@ import {
   TpSelect,
   TpSlider,
   TpSwitch,
+  TpTabs,
 } from '@tweakpad/ui';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakPane } from '../elements/pane.js';
@@ -16,7 +17,7 @@ import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
 let registered = false;
 
 /**
- * Defines the library inline controls and keyboard hint devkit uses (and what they render),
+ * Defines the library controls, tabs and keyboard hint devkit uses (and what they render),
  * plus the pane's own elements. Nothing else from the library is registered.
  */
 export function registerElements(): void {
@@ -31,6 +32,7 @@ export function registerElements(): void {
     TpColorInput,
     TpKbd,
     TpButton,
+    TpTabs,
   ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
   for (const element of [TweakPane, TweakFolder, TweakTabs, TweakTabPage])

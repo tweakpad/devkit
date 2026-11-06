@@ -2,6 +2,7 @@ import { css, html, LitElement, type PropertyValues } from 'lit';
 import { chevronDownIcon } from '@tweakpad/ui/icons/chevron-down';
 import { icon } from './icons.js';
 import { containerStyles } from './styles.js';
+import { GroupGuide } from './group-guide.js';
 
 /**
  * A collapsible group of rows. Its rows live in its own shadow root; once closed, the content is
@@ -21,9 +22,10 @@ export class TweakFolder extends LitElement {
     containerStyles,
     css`
       :host {
+        --tweak-folder-chevron-size: 14px;
+
         display: block;
-        padding-block-start: var(--tweak-section-gap);
-        border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-hairline);
+        padding-block: var(--tp-space-3);
       }
 
       :host([hidden]) {
@@ -35,7 +37,7 @@ export class TweakFolder extends LitElement {
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: var(--tp-space-2);
         inline-size: 100%;
         min-block-size: var(--tp-control-height-xs);
         padding-inline: var(--tp-space-1);
@@ -59,6 +61,9 @@ export class TweakFolder extends LitElement {
 
       .chevron {
         display: inline-flex;
+        flex: none;
+        inline-size: var(--tweak-folder-chevron-size);
+        block-size: var(--tweak-folder-chevron-size);
         transition: rotate calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
           var(--tp-easing-standard);
       }
@@ -92,7 +97,49 @@ export class TweakFolder extends LitElement {
       }
 
       .body {
-        padding-block-start: var(--tweak-row-gap);
+        position: relative;
+        padding-block-start: var(--tp-space-3);
+        padding-inline-start: calc(
+          var(--tp-space-1) + var(--tweak-folder-chevron-size) + var(--tp-space-2)
+        );
+      }
+
+      /* Trailing nested sections share the last control's bottom edge with their parent. */
+      .body > tweak-folder:nth-last-child(1 of :not([hidden])) {
+        padding-block-end: 0;
+      }
+
+      .body::before {
+        content: '';
+        position: absolute;
+        inset-block: var(--tp-space-3) 5px;
+        inset-inline-start: calc(
+          var(--tp-space-1) + var(--tweak-folder-chevron-size) / 2 - var(--tp-border-width) / 2
+        );
+        border-inline-start: var(--tp-border-width) solid var(--tp-border);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .body::after {
+        content: '';
+        position: absolute;
+        inset-block-end: 0;
+        inset-inline-start: calc(
+          var(--tp-space-1) + var(--tweak-folder-chevron-size) / 2 - 0.5px
+        );
+        inline-size: 1px;
+        block-size: 1px;
+        background: var(--tp-muted-foreground);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      :host([data-guide-hover]) .body::before,
+      :host([data-guide-focus]) .body::before,
+      :host([data-guide-hover]) .body::after,
+      :host([data-guide-focus]) .body::after {
+        opacity: 1;
       }
     `,
   ];
@@ -106,6 +153,7 @@ export class TweakFolder extends LitElement {
 
   constructor() {
     super();
+    new GroupGuide(this);
     this.body = document.createElement('div');
     this.body.className = 'body';
   }
@@ -145,8 +193,8 @@ export class TweakFolder extends LitElement {
         aria-controls="content"
         @click=${this.#onHeader}
       >
-        <span class="label">${this.heading}</span>
         <span class="chevron">${icon(chevronDownIcon, 14)}</span>
+        <span class="label">${this.heading}</span>
       </button>
       <div
         class="content"
