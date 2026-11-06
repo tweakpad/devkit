@@ -47,7 +47,7 @@ export const containerStyles = css`
     padding-inline: var(--tp-space-2-5);
     border: var(--tp-border-width) var(--tp-border-style) var(--tp-input);
     border-radius: var(--tp-radius-lg);
-    background: var(--tp-muted);
+    background: var(--tp-control);
     font-size: var(--tp-text-sm);
     line-height: var(--tp-leading-normal);
     color: var(--tp-foreground);

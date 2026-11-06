@@ -4,6 +4,8 @@ A tweak panel for tuning live values, built on the `variant="inline"` controls o
 [`@tweakpad/ui`](https://github.com/tweakpad/ui). It uses no UI framework: devkit owns its own
 state, bindings and scheduling.
 
+Panes use the library's flat appearance, inherited by their controls, folders and monitors.
+
 ```ts
 import '@tweakpad/ui/styles.css';
 import { Pane } from '@tweakpad/devkit';
@@ -90,7 +92,7 @@ reproducible with `demo/library-proof.html` (run Vite with `NODE_ENV=production`
 ## Development
 
 ```sh
-npm install        # links ../library as @tweakpad/ui (build the library first)
+npm install        # installs the published @tweakpad/ui dependency
 npm run dev        # playground at /, stress at /demo/stress.html, spike at /demo/spike-library.html
 NODE_ENV=production npx vite   # production Lit, for /demo/library-proof.html
 npm test           # core unit tests

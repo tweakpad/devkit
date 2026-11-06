@@ -32,6 +32,7 @@ const ITEMS = ['alpha', 'beta', 'gamma', 'delta'].map((v) => ({ value: v, label:
 function inline(tag: string, i: number, label?: string): El {
   const el = document.createElement(tag) as El;
   el.setAttribute('variant', 'inline');
+  el.setAttribute('appearance', 'flat');
   el.setAttribute('dir', 'ltr');
   if (label) el.setAttribute('label', `${label} ${i}`);
   return el;

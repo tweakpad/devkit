@@ -38,7 +38,7 @@
     "lint:css": "stylelint \"src/**/*.ts\""
   },
   "dependencies": {
-    "@tweakpad/ui": "file:../library"
+    "@tweakpad/ui": "^0.2.4"
   },
   "peerDependencies": {
     "lit": "^3.3.0"

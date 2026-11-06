@@ -50,6 +50,7 @@ export class Pane extends ContainerApi {
     const element = document.createElement(TweakPane.tagName) as TweakPane;
     super(context, element.body);
     this.element = element;
+    element.setAttribute('appearance', 'flat');
     element.heading = options.title ?? '';
     element.floating = options.floating ?? !options.container;
     element.anchor = options.anchor ?? 'top-right';

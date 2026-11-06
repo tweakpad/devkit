@@ -71,10 +71,10 @@ export class TweakPane extends LitElement {
         grid-template-rows: auto minmax(0, 1fr);
         max-block-size: calc(100dvh - 2 * var(--tweak-pane-inset));
         padding: var(--tp-space-1-5);
-        border: var(--tp-border-width) var(--tp-border-style) var(--tp-border);
+        border: var(--tp-border-width) var(--tp-border-style) var(--tp-edge);
         border-radius: var(--tp-radius-xl);
-        background: var(--tp-popover);
-        color: var(--tp-popover-foreground);
+        background: var(--tp-card);
+        color: var(--tp-card-foreground);
         box-shadow: var(--tp-shadow-lg);
       }
 
@@ -153,7 +153,7 @@ export class TweakPane extends LitElement {
         min-block-size: 0;
         margin-block-start: var(--tp-space-1-5);
         padding-block-start: var(--tp-space-1-5);
-        border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-border);
+        border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-hairline);
         overflow: auto;
         overscroll-behavior: contain;
         scrollbar-width: thin;

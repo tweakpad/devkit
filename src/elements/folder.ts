@@ -23,7 +23,7 @@ export class TweakFolder extends LitElement {
       :host {
         display: block;
         padding-block-start: var(--tweak-section-gap);
-        border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-border);
+        border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-hairline);
       }
 
       .header {

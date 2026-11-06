@@ -5,8 +5,7 @@ const root = import.meta.dirname;
 
 export default defineConfig({
   resolve: {
-    // @tweakpad/ui is linked from ../library, which carries its own node_modules/lit.
-    // A second Lit copy would break element upgrades and double the runtime, so force one.
+    // Keep one Lit runtime, including when @tweakpad/ui is linked locally for development.
     dedupe: ['lit', 'lit-html', 'lit-element', '@lit/reactive-element'],
   },
   server: {
