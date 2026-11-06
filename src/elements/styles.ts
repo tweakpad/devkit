@@ -32,7 +32,20 @@ export const containerStyles = css`
     contain: layout style;
   }
 
+  /* Only devkit owns this outer boundary. Component layout stays on the surface inside it. */
+  .search-item {
+    min-inline-size: 0;
+  }
+
+  .search-item[hidden] {
+    display: none !important;
+  }
+
   .row[hidden] {
+    display: none;
+  }
+
+  .chunk[hidden] {
     display: none;
   }
 

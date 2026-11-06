@@ -26,6 +26,10 @@ export class TweakFolder extends LitElement {
         border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-hairline);
       }
 
+      :host([hidden]) {
+        display: none;
+      }
+
       .header {
         all: unset;
         box-sizing: border-box;

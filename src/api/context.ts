@@ -1,9 +1,11 @@
 import type { Binding } from '../core/binding.js';
 import type { Job, Scheduler } from '../core/scheduler.js';
+import type { SearchGroupNode, SearchMetadata, SearchNode, SearchTarget } from '../core/search.js';
 
 /** A row in a container: one intersection-driven unit of work. */
-export interface Row {
+export interface Row extends SearchTarget {
   readonly element: HTMLElement;
+  readonly searchVisible: boolean;
   setVisible(visible: boolean): void;
   dispose(): void;
 }
@@ -21,14 +23,25 @@ export class Chunk {
   readonly element: HTMLDivElement;
   readonly rows: Row[] = [];
   visible = false;
+  readonly #searchChildren = new Set<SearchNode>();
+  readonly searchNode: SearchGroupNode;
 
   constructor() {
     this.element = document.createElement('div');
     this.element.className = 'chunk';
+    this.searchNode = {
+      kind: 'group',
+      children: this.#searchChildren,
+      hideWhenEmpty: 'always',
+      setFiltered: (filtered) => {
+        this.element.hidden = filtered;
+      },
+    };
   }
 
-  add(row: Row): void {
+  add(row: Row, metadata: SearchMetadata): void {
     this.rows.push(row);
+    this.#searchChildren.add({ kind: 'control', metadata, target: row });
     this.element.append(row.element);
     const n = this.rows.length;
     // A plain property, not a custom property: library controls inside watch custom properties
@@ -49,6 +62,8 @@ export class Chunk {
  */
 export class PaneContext {
   readonly bindings = new Set<Binding<unknown>>();
+  /** Reapply the pane's search when rows are added or removed. */
+  refreshSearch: (() => void) | undefined;
   /** Insertion order is recency: a row moves to the end each time it becomes visible. */
   readonly #mounted = new Set<MountableRow>();
   readonly #chunks = new Map<Element, Chunk>();

@@ -1,4 +1,11 @@
 import { Binding, type ChangeListener } from '../core/binding.js';
+import {
+  filterSearchTree,
+  type SearchGroupNode,
+  type SearchMetadata,
+  type SearchNode,
+  type SearchScopeNode,
+} from '../core/search.js';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
 import { GraphMonitor } from '../monitors/graph-monitor.js';
@@ -42,11 +49,18 @@ export class ContainerApi {
   #chunk: Chunk | null = null;
   readonly #chunks: Chunk[] = [];
   readonly #children: Disposable[] = [];
+  readonly #searchChildren = new Set<SearchNode>();
+  readonly searchNode: SearchScopeNode | SearchGroupNode;
 
   constructor(
     protected readonly context: PaneContext,
     protected readonly body: HTMLElement,
-  ) {}
+    setFiltered?: (filtered: boolean) => void,
+  ) {
+    this.searchNode = setFiltered
+      ? { kind: 'group', children: this.#searchChildren, hideWhenEmpty: 'searching', setFiltered }
+      : { kind: 'scope', children: this.#searchChildren };
+  }
 
   /** Binds `target[key]` to an inline control chosen from its value and `params`. */
   addBinding<T extends object, K extends keyof T & PropertyKey>(
@@ -59,7 +73,7 @@ export class ContainerApi {
     if (params.disabled) row.setDisabled(true);
     if (params.hidden) row.setHidden(true);
     this.context.bindings.add(binding);
-    this.#addRow(row);
+    this.#addRow(row, { name: String(key), label: params.label ?? String(key) });
     const api = new BindingApi<T[K]>(
       binding as unknown as Binding<T[K]>,
       row as unknown as ControlRow<T[K]>,
@@ -98,7 +112,7 @@ export class ContainerApi {
       row = new TextMonitorRow(binding, new TextMonitorView(label, precision));
     }
     if (params.hidden) row.setHidden(true);
-    this.#addRow(row);
+    this.#addRow(row, { name: String(key), label });
     const api = new MonitorApi(row, this.context);
     this.#children.push(api);
     return api;
@@ -111,6 +125,8 @@ export class ContainerApi {
     this.#addBlock(element);
     const folder = new FolderApi(this.context, element);
     this.#children.push(folder);
+    this.#searchChildren.add(folder.searchNode);
+    this.context.refreshSearch?.();
     return folder;
   }
 
@@ -127,13 +143,21 @@ export class ContainerApi {
     this.#addBlock(element);
     const tabs = new TabsApi(element, pages);
     this.#children.push(tabs);
+    this.#searchChildren.add(tabs.searchNode);
+    this.context.refreshSearch?.();
     return tabs;
+  }
+
+  /** Filters fields by property name or visible label, returning the number of matches. */
+  filter(query: string): number {
+    return filterSearchTree(this.searchNode, query);
   }
 
   /** Removes everything this container holds. */
   dispose(): void {
     for (const child of this.#children) child.dispose();
     this.#children.length = 0;
+    this.#searchChildren.clear();
     for (const chunk of this.#chunks) {
       this.context.unobserve(chunk);
       chunk.element.remove();
@@ -142,16 +166,18 @@ export class ContainerApi {
     this.#chunk = null;
   }
 
-  #addRow(row: Row): void {
+  #addRow(row: Row, metadata: SearchMetadata): void {
     let chunk = this.#chunk;
     if (!chunk || chunk.rows.length >= CHUNK_SIZE) {
       chunk = new Chunk();
       this.#chunk = chunk;
       this.#chunks.push(chunk);
+      this.#searchChildren.add(chunk.searchNode);
       this.body.append(chunk.element);
       this.context.observe(chunk);
     }
-    chunk.add(row);
+    chunk.add(row, metadata);
+    this.context.refreshSearch?.();
   }
 
   #addBlock(element: HTMLElement): void {
@@ -166,7 +192,9 @@ export class FolderApi extends ContainerApi {
     context: PaneContext,
     readonly element: TweakFolder,
   ) {
-    super(context, element.body);
+    super(context, element.body, (filtered) => {
+      element.hidden = filtered;
+    });
   }
 
   get title(): string {
@@ -201,10 +229,13 @@ export class TabPageApi extends ContainerApi {
 }
 
 export class TabsApi {
+  readonly searchNode: SearchScopeNode;
   constructor(
     readonly element: TweakTabs,
     readonly pages: TabPageApi[],
-  ) {}
+  ) {
+    this.searchNode = { kind: 'scope', children: pages.map((page) => page.searchNode) };
+  }
 
   get selected(): number {
     return this.element.selected;
@@ -212,6 +243,10 @@ export class TabsApi {
 
   set selected(index: number) {
     this.element.select(index);
+  }
+
+  filter(query: string): number {
+    return filterSearchTree(this.searchNode, query);
   }
 
   dispose(): void {
@@ -252,14 +287,15 @@ export class BindingApi<T> {
   }
 
   get hidden(): boolean {
-    return this.row.element.hidden === true;
+    return this.row.hidden;
   }
 
   set hidden(hidden: boolean) {
     this.row.setHidden(hidden);
+    this.context.refreshSearch?.();
   }
 
-  /** The row element (placeholder until first shown, then the library control's row). */
+  /** The stable visibility shell containing the complete control or its placeholder. */
   get element(): HTMLElement {
     return this.row.element;
   }
@@ -277,6 +313,7 @@ export class BindingApi<T> {
   dispose(): void {
     this.context.bindings.delete(this.binding as Binding<unknown>);
     this.row.dispose();
+    this.context.refreshSearch?.();
   }
 }
 
@@ -288,11 +325,12 @@ export class MonitorApi {
   ) {}
 
   get hidden(): boolean {
-    return this.row.element.hidden === true;
+    return this.row.hidden;
   }
 
   set hidden(hidden: boolean) {
     this.row.setHidden(hidden);
+    this.context.refreshSearch?.();
   }
 
   get element(): HTMLElement {
@@ -302,5 +340,6 @@ export class MonitorApi {
   dispose(): void {
     if (this.row instanceof TextMonitorRow) this.context.bindings.delete(this.row.binding);
     this.row.dispose();
+    this.context.refreshSearch?.();
   }
 }

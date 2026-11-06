@@ -50,6 +50,10 @@ export class Pane extends ContainerApi {
     const element = document.createElement(TweakPane.tagName) as TweakPane;
     super(context, element.body);
     this.element = element;
+    context.refreshSearch = () => {
+      if (element.searchQuery.trim()) this.#onSearch();
+    };
+    element.addEventListener('tweak-search', this.#onSearch);
     element.setAttribute('appearance', 'flat');
     element.setAttribute('density', 'compact');
     element.heading = options.title ?? '';
@@ -87,8 +91,14 @@ export class Pane extends ContainerApi {
   }
 
   override dispose(): void {
+    this.element.removeEventListener('tweak-search', this.#onSearch);
+    this.context.refreshSearch = undefined;
     super.dispose();
     this.context.dispose();
     this.element.remove();
   }
+
+  #onSearch = (): void => {
+    this.element.searchMatches = this.filter(this.element.searchQuery);
+  };
 }

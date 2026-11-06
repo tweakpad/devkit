@@ -5,18 +5,72 @@ import type { GraphMonitor } from '../monitors/graph-monitor.js';
 import type { MountableRow, PaneContext, Row } from './context.js';
 
 /**
- * A bound control. Until it first scrolls into view it is a placeholder painted like an inline
- * control (label only); the library element is created by a budgeted job, so opening a folder of
- * fifty rows spreads its cost over a few frames instead of one long task.
+ * The devkit-owned visibility boundary of one complete control. Renderers own only `surface`
+ * and its descendants; their layout rules cannot compete with the search shell's hiding rule.
  */
-export class ControlRow<T> implements MountableRow {
-  queued = false;
+export abstract class SearchableRow implements Row {
   readonly element: HTMLDivElement;
-  #visible = false;
-  #mounted = false;
   #hidden = false;
-  #disabled = false;
+  #filtered = false;
+  #visible = false;
   #disposed = false;
+
+  constructor(protected readonly surface: HTMLElement) {
+    this.element = document.createElement('div');
+    this.element.className = 'search-item';
+    this.element.append(surface);
+  }
+
+  get hidden(): boolean {
+    return this.#hidden;
+  }
+
+  get disposed(): boolean {
+    return this.#disposed;
+  }
+
+  /** Search eligibility does not depend on mounting, intersection, tabs or folder expansion. */
+  get searchVisible(): boolean {
+    return !this.#hidden && !this.#filtered && !this.#disposed;
+  }
+
+  get visible(): boolean {
+    return this.#visible && this.searchVisible;
+  }
+
+  setVisible(visible: boolean): void {
+    this.#visible = visible;
+    this.syncVisibility(this.visible);
+  }
+
+  setHidden(hidden: boolean): void {
+    this.#hidden = hidden;
+    this.#sync();
+  }
+
+  setFiltered(filtered: boolean): void {
+    this.#filtered = filtered;
+    this.#sync();
+  }
+
+  dispose(): void {
+    this.#disposed = true;
+    this.element.remove();
+  }
+
+  protected abstract syncVisibility(visible: boolean): void;
+
+  #sync(): void {
+    this.element.hidden = !this.searchVisible;
+    this.syncVisibility(this.visible);
+  }
+}
+
+/** A bound control, mounted within budget when its row first becomes visible. */
+export class ControlRow<T> extends SearchableRow implements MountableRow {
+  queued = false;
+  #mounted = false;
+  #disabled = false;
 
   constructor(
     private readonly context: PaneContext,
@@ -24,27 +78,12 @@ export class ControlRow<T> implements MountableRow {
     readonly view: LibraryView<T>,
     private readonly label: string,
   ) {
-    this.element = document.createElement('div');
+    super(document.createElement('div'));
     this.#renderPlaceholder();
-  }
-
-  get visible(): boolean {
-    return this.#visible && !this.#hidden;
   }
 
   get isMounted(): boolean {
     return this.#mounted;
-  }
-
-  setVisible(visible: boolean): void {
-    this.#visible = visible;
-    this.#sync();
-  }
-
-  setHidden(hidden: boolean): void {
-    this.#hidden = hidden;
-    this.element.hidden = hidden;
-    this.#sync();
   }
 
   setDisabled(disabled: boolean): void {
@@ -53,13 +92,12 @@ export class ControlRow<T> implements MountableRow {
     this.element.toggleAttribute('data-disabled', disabled);
   }
 
-  /** Scheduler job: create the library element. */
+  /** Scheduler job: create the library element inside the stable visibility boundary. */
   run(): void {
-    if (this.#disposed || this.#mounted || !this.visible) return;
+    if (this.disposed || this.#mounted || !this.visible) return;
     this.binding.value = this.binding.read();
-    // Restyle the row before the element is inside it: the element watches its ancestors' class.
-    this.element.className = 'row';
-    this.view.mount(this.element, this.#disabled);
+    this.surface.className = 'row';
+    this.view.mount(this.surface, this.#disabled);
     this.binding.attach(this.view);
     this.#mounted = true;
     this.context.mounted(this);
@@ -74,15 +112,13 @@ export class ControlRow<T> implements MountableRow {
     this.#renderPlaceholder();
   }
 
-  dispose(): void {
-    this.#disposed = true;
+  override dispose(): void {
     this.unmount();
     this.binding.dispose();
-    this.element.remove();
+    super.dispose();
   }
 
-  #sync(): void {
-    const visible = this.visible;
+  protected override syncVisibility(visible: boolean): void {
     this.binding.setVisible(visible);
     if (!visible) return;
     if (this.#mounted) this.context.touch(this);
@@ -90,68 +126,46 @@ export class ControlRow<T> implements MountableRow {
   }
 
   #renderPlaceholder(): void {
-    this.element.className = 'row placeholder';
+    this.surface.className = 'row placeholder';
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = this.label;
-    this.element.replaceChildren(label);
+    this.surface.replaceChildren(label);
   }
 }
 
-/** A text monitor: cheap DOM, built at once, sampled only while on screen. */
-export class TextMonitorRow implements Row {
-  readonly element: HTMLElement;
-  #hidden = false;
-  #visible = false;
-
+/** A text monitor: cheap DOM, sampled only while its complete row is on screen. */
+export class TextMonitorRow extends SearchableRow {
   constructor(
     readonly binding: Binding<unknown>,
     readonly view: TextMonitorView,
   ) {
-    this.element = view.element;
+    super(view.element);
     binding.attach(view);
   }
 
-  setVisible(visible: boolean): void {
-    this.#visible = visible;
-    this.binding.setVisible(visible && !this.#hidden);
+  protected override syncVisibility(visible: boolean): void {
+    this.binding.setVisible(visible);
   }
 
-  setHidden(hidden: boolean): void {
-    this.#hidden = hidden;
-    this.element.hidden = hidden;
-    this.setVisible(this.#visible);
-  }
-
-  dispose(): void {
+  override dispose(): void {
     this.binding.dispose();
-    this.element.remove();
+    super.dispose();
   }
 }
 
-/** A graph monitor: samples all the time, draws only while on screen. */
-export class GraphMonitorRow implements Row {
-  readonly element: HTMLElement;
-  #hidden = false;
-  #visible = false;
-
+/** A graph monitor: samples all the time, draws only while its complete row is on screen. */
+export class GraphMonitorRow extends SearchableRow {
   constructor(readonly monitor: GraphMonitor) {
-    this.element = monitor.element;
+    super(monitor.element);
   }
 
-  setVisible(visible: boolean): void {
-    this.#visible = visible;
-    this.monitor.setVisible(visible && !this.#hidden);
+  protected override syncVisibility(visible: boolean): void {
+    this.monitor.setVisible(visible);
   }
 
-  setHidden(hidden: boolean): void {
-    this.#hidden = hidden;
-    this.element.hidden = hidden;
-    this.setVisible(this.#visible);
-  }
-
-  dispose(): void {
+  override dispose(): void {
     this.monitor.dispose();
-    this.element.remove();
+    super.dispose();
   }
 }

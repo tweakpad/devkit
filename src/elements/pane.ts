@@ -1,6 +1,7 @@
 import { css, html, LitElement } from 'lit';
 import { chevronDownIcon } from '@tweakpad/ui/icons/chevron-down';
-import { icon } from './icons.js';
+import type { TpInput } from '@tweakpad/ui';
+import { icon, searchIcon } from './icons.js';
 import { containerStyles, paneTokens } from './styles.js';
 
 export type PaneAnchor = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
@@ -23,6 +24,9 @@ export class TweakPane extends LitElement {
     floating: { type: Boolean, reflect: true },
     anchor: { type: String, reflect: true },
     movable: { type: Boolean, reflect: true },
+    searchOpen: { state: true },
+    searchQuery: { state: true },
+    searchMatches: { state: true },
   };
 
   static override styles = [
@@ -68,7 +72,7 @@ export class TweakPane extends LitElement {
       .panel {
         box-sizing: border-box;
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 1fr);
         max-block-size: calc(100dvh - 2 * var(--tweak-pane-inset));
         padding: var(--tp-space-1-5);
         border: var(--tp-border-width) var(--tp-border-style) var(--tp-edge);
@@ -84,11 +88,14 @@ export class TweakPane extends LitElement {
       }
 
       .header {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(var(--tp-control-height-xs), 1fr) minmax(0, auto) minmax(
+            var(--tp-control-height-xs),
+            1fr
+          );
         align-items: center;
         gap: var(--tp-space-1);
         min-block-size: var(--tp-control-height-sm);
-        padding-inline-start: var(--tp-space-1);
         touch-action: none;
         user-select: none;
       }
@@ -102,19 +109,20 @@ export class TweakPane extends LitElement {
       }
 
       .title {
-        flex: 1;
         min-inline-size: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         font-size: var(--tp-text-sm);
         font-weight: var(--tp-font-semibold);
+        text-align: center;
       }
 
       .actions {
         display: flex;
         align-items: center;
         gap: var(--tp-space-0-5);
+        justify-self: end;
       }
 
       .icon-button {
@@ -132,6 +140,85 @@ export class TweakPane extends LitElement {
       .icon-button:hover {
         background: var(--tp-muted);
         color: var(--tp-foreground);
+      }
+
+      .icon-button[aria-pressed='true'] {
+        background: var(--tp-control);
+        color: var(--tp-primary);
+      }
+
+      .search-reveal {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        translate: 0 calc(-1 * var(--tp-space-1));
+        transition:
+          grid-template-rows calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
+            var(--tp-easing-standard),
+          opacity calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
+            var(--tp-easing-standard),
+          translate calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
+            var(--tp-easing-standard);
+      }
+
+      .search-reveal[data-open] {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        translate: 0 0;
+      }
+
+      .search-clip {
+        min-block-size: 0;
+        overflow: clip;
+        overflow-clip-margin: var(--tp-ring-width);
+      }
+
+      .search-row {
+        display: flex;
+        align-items: center;
+        gap: var(--tp-space-1);
+        margin-block-start: var(--tp-space-1-5);
+        padding-inline-end: var(--tp-space-1-5);
+        border-radius: var(--tp-radius-lg);
+        background: var(--tp-control);
+      }
+
+      .search-input {
+        flex: 1;
+        min-inline-size: 0;
+      }
+
+      .search-input > input[data-tp-editor] {
+        border-color: transparent;
+        background: transparent;
+        font-family: var(--tp-font-sans);
+      }
+
+      .clear-button {
+        all: unset;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--tp-space-1);
+        padding: var(--tp-space-0-5) var(--tp-space-1);
+        border-radius: var(--tp-radius-sm);
+        font-size: var(--tp-text-xs);
+        color: var(--tp-muted-foreground);
+        cursor: pointer;
+      }
+
+      .clear-button:hover {
+        color: var(--tp-foreground);
+      }
+
+      .clear-button:focus-visible {
+        outline: var(--tp-ring-width) solid var(--tp-ring);
+      }
+
+      .empty {
+        margin: var(--tp-space-2);
+        font-size: var(--tp-text-sm);
+        color: var(--tp-muted-foreground);
+        text-align: center;
       }
 
       .icon-button:focus-visible {
@@ -176,6 +263,9 @@ export class TweakPane extends LitElement {
   floating = true;
   anchor: PaneAnchor = 'top-right';
   movable = true;
+  searchOpen = false;
+  searchQuery = '';
+  searchMatches = 0;
   /** Where the pane's rows, folders and tabs go. Owned by the API layer, never by the template. */
   readonly body: HTMLDivElement;
 
@@ -189,6 +279,7 @@ export class TweakPane extends LitElement {
     this.body = document.createElement('div');
     this.body.className = 'body';
     this.#offsetSheet.replaceSync(':host{translate:0 0}');
+    this.addEventListener('keydown', this.#onSearchKeyDown, true);
   }
 
   protected override createRenderRoot() {
@@ -218,6 +309,17 @@ export class TweakPane extends LitElement {
         @pointerup=${this.#onPointerUp}
         @pointercancel=${this.#onPointerUp}
       >
+        <button
+          class="icon-button search-toggle"
+          type="button"
+          aria-label="Search fields"
+          aria-pressed=${String(this.searchOpen)}
+          aria-expanded=${String(this.searchOpen)}
+          aria-controls="search"
+          @click=${this.#onSearchToggle}
+        >
+          ${icon(searchIcon, 14)}
+        </button>
         <span class="title">${this.heading}</span>
         <span class="actions">
           <slot name="actions"></slot>
@@ -231,9 +333,86 @@ export class TweakPane extends LitElement {
           </button>
         </span>
       </div>
-      <div class="scroll" part="body" ?hidden=${!this.expanded}>${this.body}</div>
+      <div
+        class="search-reveal"
+        id="search"
+        role="search"
+        ?data-open=${this.searchOpen && this.expanded}
+        ?inert=${!this.searchOpen || !this.expanded}
+      >
+        <div class="search-clip">
+          <div class="search-row">
+            <tp-input
+              class="search-input"
+              label="Search fields"
+              placeholder="Search fields…"
+              .value=${this.searchQuery}
+              @tp-value-change=${this.#onSearchInput}
+            ></tp-input>
+            <button
+              class="clear-button"
+              type="button"
+              @click=${this.#closeSearch}
+              aria-label="Clear and close search"
+              aria-keyshortcuts="Escape"
+            >
+              Clear <tp-kbd value="Escape" aria-hidden="true"></tp-kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="scroll" part="body" ?hidden=${!this.expanded}>
+        <p
+          class="empty"
+          role="status"
+          ?hidden=${!this.searchQuery.trim() || this.searchMatches > 0}
+        >
+          No matching fields
+        </p>
+        ${this.body}
+      </div>
     </div>`;
   }
+
+  #onSearchToggle = (): void => {
+    if (this.searchOpen) {
+      this.#closeSearch();
+      return;
+    }
+    this.searchOpen = true;
+    this.expanded = true;
+    void this.updateComplete.then(async () => {
+      const input = this.renderRoot.querySelector<TpInput>('.search-input')!;
+      await input.updateComplete;
+      if (this.searchOpen) input.inputElement?.focus({ preventScroll: true });
+    });
+  };
+
+  #closeSearch = (): void => {
+    this.searchOpen = false;
+    this.searchQuery = '';
+    this.#notifySearch();
+    void this.updateComplete.then(() =>
+      this.renderRoot.querySelector<HTMLButtonElement>('.search-toggle')!.focus(),
+    );
+  };
+
+  #onSearchInput = (event: CustomEvent<{ value: string }>): void => {
+    this.searchQuery = event.detail.value;
+    (event.currentTarget as TpInput).value = this.searchQuery;
+    this.#notifySearch();
+  };
+
+  #notifySearch(): void {
+    this.dispatchEvent(new CustomEvent('tweak-search', { detail: { query: this.searchQuery } }));
+  }
+
+  #onSearchKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || !this.searchOpen || event.isComposing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.#closeSearch();
+  };
 
   #onToggle = (): void => {
     this.expanded = !this.expanded;

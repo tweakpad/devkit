@@ -6,6 +6,14 @@ state, bindings and scheduling.
 
 Panes use the library's flat appearance, inherited by their controls, folders and monitors.
 
+The search icon at the left of the centered title toggles a search bar. Typing filters fields
+and monitors by property name or label across all tabs and folders. Tabs stay available;
+folders with no matching fields are hidden. Selected tabs and folder expansion stay unchanged.
+**Clear** or **Esc** clears and closes search. Fields explicitly hidden through the API stay hidden.
+
+Composed controls follow the [search ownership contract](docs/search-contract.md): explicit
+metadata, one visibility boundary per complete field, and eligible descendant counts for groups.
+
 ```ts
 import '@tweakpad/ui/styles.css';
 import { Pane } from '@tweakpad/devkit';
