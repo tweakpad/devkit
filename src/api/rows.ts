@@ -152,6 +152,7 @@ export class ControlRow<T> extends SearchableRow implements MountableRow {
   }
 
   protected override syncVisibility(visible: boolean): void {
+    this.view.setVisible(visible);
     this.binding.setVisible(visible);
     if (!visible) return;
     if (this.#mounted) this.context.touch(this);

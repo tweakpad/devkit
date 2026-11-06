@@ -94,8 +94,11 @@ motion.addBinding(params, 'seed', { label: 'Seed', step: 1 });
 const live = scene.addFolder({ title: 'Live values' });
 live.addBinding(stats, 'angle', { label: 'Angle (app-driven)', min: 0, max: 6.283, precision: 2 });
 
-style.addBinding(params, 'hue', { label: 'Orb color' });
-style.addBinding(params, 'glow', { label: 'Glow', color: { type: 'float' } });
+style.addBinding(params, 'hue', { label: 'Orb color (native)', color: { picker: 'native' } });
+style.addBinding(params, 'glow', {
+  label: 'Glow (Tweakpad)',
+  color: { type: 'float', picker: 'tweakpad' },
+});
 style.addBinding(params, 'size', { label: 'Orb size', min: 1, max: 24, step: 0.5 });
 style.addBinding(params, 'blend', {
   label: 'Blend',

@@ -91,6 +91,11 @@ export abstract class LibraryView<T> implements BindingView<T> {
     if (this.el) this.el.disabled = disabled;
   }
 
+  /** Composed views can release transient UI when their complete control is hidden. */
+  setVisible(visible: boolean): void {
+    void visible;
+  }
+
   write(value: T): void {
     const el = this.el;
     if (!el) return;

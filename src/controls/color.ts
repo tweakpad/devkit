@@ -1,6 +1,7 @@
 import type { ValueCodec } from '../core/binding.js';
 
 export type ColorObjectType = 'int' | 'float';
+export type ColorPickerMode = 'native' | 'tweakpad';
 
 interface RgbObject {
   r: number;

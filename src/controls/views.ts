@@ -1,4 +1,7 @@
 import type { Binding } from '../core/binding.js';
+import { defineElement } from '@tweakpad/ui';
+import { TpColorPicker } from '@tweakpad/ui/widgets';
+import type { ColorPickerMode } from './color.js';
 import { LibraryView, type LibraryElement } from './library-view.js';
 
 export interface NumberSpec {
@@ -199,10 +202,15 @@ export type ColorFormat = 'hex' | 'rgb' | 'hsl' | 'oklch';
 
 /** A CSS color string: tp-color-input, inline. */
 export class ColorView extends LibraryView<string> {
+  #picker: TpColorPicker | null = null;
   constructor(
     binding: Binding<string>,
     label: string,
-    private readonly options: { format?: ColorFormat | undefined; alpha?: boolean | undefined },
+    private readonly options: {
+      format?: ColorFormat | undefined;
+      alpha?: boolean | undefined;
+      picker?: ColorPickerMode | undefined;
+    },
   ) {
     super(binding, label);
   }
@@ -215,10 +223,41 @@ export class ColorView extends LibraryView<string> {
     const el = make('tp-color-input', {
       label: this.label,
       format: this.options.format ?? 'hex',
+      picker: this.options.picker === 'tweakpad' ? 'none' : 'native',
     });
     if (this.options.alpha) el.setAttribute('alpha', '');
     el.value = value;
+    if (this.options.picker === 'tweakpad') {
+      defineElement(TpColorPicker.tagName, TpColorPicker);
+      const picker = document.createElement('tp-color-picker') as TpColorPicker;
+      picker.picker = 'popup';
+      picker.label = this.label;
+      picker.format = this.options.format ?? 'hex';
+      picker.formats = [picker.format];
+      picker.formatSelect = false;
+      picker.alpha = this.options.alpha ?? false;
+      picker.value = value;
+      el.slot = 'trigger';
+      picker.append(el);
+      this.#picker = picker;
+      return picker;
+    }
     return el;
+  }
+
+  override setVisible(visible: boolean): void {
+    if (!visible && this.#picker?.open) this.#picker.close();
+  }
+
+  override setDisabled(disabled: boolean): void {
+    if (disabled) this.setVisible(false);
+    super.setDisabled(disabled);
+  }
+
+  override unmount(): void {
+    this.setVisible(false);
+    super.unmount();
+    this.#picker = null;
   }
 
   protected apply(el: LibraryElement, value: string): void {

@@ -1,4 +1,5 @@
 import type { Binding } from '../core/binding.js';
+import type { ColorPickerMode } from '../controls/color.js';
 import type { Job, Scheduler } from '../core/scheduler.js';
 import type { SearchGroupNode, SearchMetadata, SearchNode, SearchTarget } from '../core/search.js';
 
@@ -78,6 +79,7 @@ export class PaneContext {
     public maxMounted: number,
     /** Default sampling interval for input bindings: 0 every frame, -1 manual. */
     readonly interval: number,
+    readonly colorPicker: ColorPickerMode = 'native',
   ) {
     this.#observer = new IntersectionObserver(
       (entries) => {

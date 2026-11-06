@@ -4,6 +4,7 @@ import { filterSearchTree, type SearchNode } from '../src/core/search.js';
 import { containerStyles } from '../src/elements/styles.js';
 import { checkButtonApi } from './button-api-checks.js';
 import { checkInlineApi } from './inline-api-checks.js';
+import { checkColorApi } from './color-api-checks.js';
 
 /** Generic composition fixture: no dependency on any production control's rendering. */
 class ComposedRow extends SearchableRow {
@@ -89,6 +90,7 @@ try {
   );
   checks.push(...(await checkButtonApi()));
   checks.push(...(await checkInlineApi()));
+  checks.push(...(await checkColorApi()));
   document.getElementById('result')!.textContent = `${checks.length} browser checks passed.`;
   document.body.dataset.result = 'passed';
 } catch (error) {

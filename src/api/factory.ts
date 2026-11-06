@@ -5,6 +5,7 @@ import {
   isColorObject,
   isColorString,
   type ColorObjectType,
+  type ColorPickerMode,
 } from '../controls/color.js';
 import type { LibraryView } from '../controls/library-view.js';
 import {
@@ -26,6 +27,14 @@ export type OptionList =
   | readonly (string | number | boolean)[]
   | readonly { label: string; value: unknown }[];
 
+export interface ColorBindingParams {
+  type?: ColorObjectType;
+  format?: ColorFormat;
+  alpha?: boolean;
+  /** Overrides the pane's picker choice for this binding. */
+  picker?: ColorPickerMode;
+}
+
 export interface BindingParams {
   /** Row label; defaults to the property key. */
   label?: string;
@@ -39,7 +48,7 @@ export interface BindingParams {
   /** Turns any value into a pick from these options. */
   options?: OptionList;
   /** Color handling: object channel range, string notation, alpha. */
-  color?: { type?: ColorObjectType; format?: ColorFormat; alpha?: boolean };
+  color?: ColorBindingParams;
   /** Sampling interval in ms for this binding; 0 every frame, -1 only on refresh(). */
   interval?: number;
   disabled?: boolean;
@@ -132,6 +141,7 @@ export function createControl(
         ? make<string>(undefined, colorObjectCodec(params.color?.type ?? 'int'))
         : make<string>();
       const view = new ColorView(binding, label, {
+        picker: params.color?.picker ?? context.colorPicker,
         format: objectValue ? 'hex' : params.color?.format,
         alpha: objectValue ? false : params.color?.alpha,
       });

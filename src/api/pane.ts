@@ -3,8 +3,11 @@ import { registerElements } from '../controls/register.js';
 import { TweakPane, type PaneAnchor } from '../elements/pane.js';
 import { ContainerApi } from './container.js';
 import { PaneContext } from './context.js';
+import type { ColorPickerMode } from '../controls/color.js';
 
 export interface PaneOptions {
+  /** Default color picker for all bindings, including inline rows. Default 'native'. */
+  colorPicker?: ColorPickerMode;
   title?: string;
   /** Where the pane goes. Omitted: a floating pane on the document body. */
   container?: HTMLElement;
@@ -46,6 +49,7 @@ export class Pane extends ContainerApi {
       options.scheduler ?? sharedScheduler(),
       options.maxMounted ?? 300,
       interval,
+      options.colorPicker ?? 'native',
     );
     const element = document.createElement(TweakPane.tagName) as TweakPane;
     super(context, element.body);

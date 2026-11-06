@@ -10,7 +10,9 @@ export {
   type MonitorParams,
   type TabsParams,
 } from './api/container.js';
-export type { BindingParams, ControlKind, OptionList } from './api/factory.js';
+export type { BindingParams, ColorBindingParams, ControlKind, OptionList } from './api/factory.js';
+export type { ColorPickerMode, ColorObjectType } from './controls/color.js';
+export type { ColorFormat } from './controls/views.js';
 export { ButtonApi, type ButtonParams } from './api/buttons.js';
 export {
   InlineRowApi,

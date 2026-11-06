@@ -43,6 +43,11 @@ The control is inferred from the value; `view` overrides the inference.
 Monitors are devkit's own lightweight rows: `text` writes a single Text node, and `graph` is
 a canvas fed from a Float32Array ring buffer.
 
+Color bindings accept `color: { picker: 'native' | 'tweakpad' }`. Set
+`new Pane({ colorPicker: 'tweakpad' })` to change the pane default; individual bindings can
+override it. Native is the default. See [color picker configuration](docs/api/colors.md)
+for formats, alpha, RGB objects and mixed inline rows.
+
 Actions use `addButton({ title, onClick })`. Compose any supported controls with `addRow`:
 
 ```ts
