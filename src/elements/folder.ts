@@ -142,6 +142,12 @@ export class TweakFolder extends LitElement {
         pointer-events: none;
       }
 
+      .body::before,
+      .body::after {
+        transition: opacity calc(var(--tp-duration-fast) * var(--tp-motion-scale, 1))
+          var(--tp-easing-standard);
+      }
+
       :host([data-guide-hover]) .body::before,
       :host([data-guide-focus]) .body::before,
       :host([data-guide-hover]) .body::after,
