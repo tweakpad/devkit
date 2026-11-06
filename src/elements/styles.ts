@@ -66,6 +66,14 @@ export const containerStyles = css`
     white-space: nowrap;
   }
 
+  .value,
+  tp-input > input[data-tp-editor],
+  tp-slider::part(slider-output),
+  tp-select::part(select-value),
+  tp-color-input::part(color-input-value) {
+    font-family: var(--tp-font-mono);
+  }
+
   .monitor.graph {
     display: grid;
     grid-template-rows: auto 1fr;

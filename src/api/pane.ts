@@ -51,6 +51,7 @@ export class Pane extends ContainerApi {
     super(context, element.body);
     this.element = element;
     element.setAttribute('appearance', 'flat');
+    element.setAttribute('density', 'compact');
     element.heading = options.title ?? '';
     element.floating = options.floating ?? !options.container;
     element.anchor = options.anchor ?? 'top-right';
