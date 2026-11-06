@@ -3,6 +3,7 @@ import { SearchableRow } from '../src/api/rows.js';
 import { filterSearchTree, type SearchNode } from '../src/core/search.js';
 import { containerStyles } from '../src/elements/styles.js';
 import { checkButtonApi } from './button-api-checks.js';
+import { checkInlineApi } from './inline-api-checks.js';
 
 /** Generic composition fixture: no dependency on any production control's rendering. */
 class ComposedRow extends SearchableRow {
@@ -87,6 +88,7 @@ try {
     'disposed composition cannot keep a group visible',
   );
   checks.push(...(await checkButtonApi()));
+  checks.push(...(await checkInlineApi()));
   document.getElementById('result')!.textContent = `${checks.length} browser checks passed.`;
   document.body.dataset.result = 'passed';
 } catch (error) {

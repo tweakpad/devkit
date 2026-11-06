@@ -34,6 +34,7 @@ export const containerStyles = css`
 
   /* Only devkit owns this outer boundary. Component layout stays on the surface inside it. */
   .search-item {
+    display: grid;
     min-inline-size: 0;
   }
 
@@ -43,7 +44,7 @@ export const containerStyles = css`
 
   .inline-row {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     gap: var(--tweak-row-gap);
     min-inline-size: 0;
   }

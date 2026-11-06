@@ -10,6 +10,7 @@ import type { MountableRow, PaneContext, Row } from './context.js';
  */
 export abstract class SearchableRow implements Row {
   readonly element: HTMLDivElement;
+  onEligibilityChange: (() => void) | undefined;
   #hidden = false;
   #filtered = false;
   #visible = false;
@@ -69,6 +70,7 @@ export abstract class SearchableRow implements Row {
   setHidden(hidden: boolean): void {
     this.#hidden = hidden;
     this.#sync();
+    this.onEligibilityChange?.();
   }
 
   setFiltered(filtered: boolean): void {
@@ -79,6 +81,11 @@ export abstract class SearchableRow implements Row {
   dispose(): void {
     this.#disposed = true;
     this.element.remove();
+    this.onEligibilityChange?.();
+  }
+
+  protected refreshVisibility(): void {
+    this.#sync();
   }
 
   protected abstract syncVisibility(visible: boolean): void;

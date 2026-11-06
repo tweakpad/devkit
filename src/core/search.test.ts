@@ -36,6 +36,16 @@ function group(children: SearchNode[], hideWhenEmpty: 'always' | 'searching' = '
 }
 
 describe('search ownership contract', () => {
+  it('matches additional authored terms on one atomic mixed composition', () => {
+    const field = control('motion', '');
+    const node: SearchControlNode = {
+      ...field.node,
+      metadata: { name: 'motion', label: '', terms: ['Speed', 'Reset'] },
+    };
+    expect(filterSearchTree(node, 'reset')).toBe(1);
+    expect(filterSearchTree(node, 'speed')).toBe(1);
+    expect(filterSearchTree(node, 'speed reset')).toBe(0);
+  });
   it('matches authored property names and labels, with trimmed case-insensitive queries', () => {
     const { node, target } = control('fieldOfView', 'Focal length');
     expect(filterSearchTree(node, ' FIELDofVIEW ')).toBe(1);

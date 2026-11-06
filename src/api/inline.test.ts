@@ -3,7 +3,7 @@ import type { Pane } from './pane.js';
 import type { BindingApi, MonitorApi } from './container.js';
 import type { ButtonApi } from './buttons.js';
 
-function declareMixedRow(pane: Pane) {
+export function declareMixedRow(pane: Pane) {
   const state = { speed: 1, caption: 'Scene' };
   return pane.addRow({
     items: [

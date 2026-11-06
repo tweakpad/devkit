@@ -43,7 +43,7 @@ The control is inferred from the value; `view` overrides the inference.
 Monitors are devkit's own lightweight rows: `text` writes a single Text node, and `graph` is
 a canvas fed from a Float32Array ring buffer.
 
-Actions use `addButton({ title, onClick })` or an inline composition:
+Actions use `addButton({ title, onClick })`. Compose any supported controls with `addRow`:
 
 ```ts
 const actions = pane.addFolder({ title: 'Actions' });
@@ -54,18 +54,19 @@ actions.addButton({
     params.paused = false;
   },
 });
-actions.addButtons({
+actions.addRow({
   name: 'playback',
-  buttons: [
-    { title: 'Pause', onClick: () => { params.paused = true; } },
-    { title: 'Resume', onClick: () => { params.paused = false; } },
+  items: [
+    { type: 'button', title: 'Pause', onClick: () => { params.paused = true; } },
+    { type: 'button', title: 'Resume', onClick: () => { params.paused = false; } },
   ],
 });
 ```
 
-Both are supported on panes, folders and tab pages. Inline buttons share one complete search
-boundary: matching either title retains the row. See the [Buttons API](docs/api/buttons.md)
-for all configuration options, returned handles, state changes and disposal behavior.
+Rows are supported on panes, folders and tab pages. The same declaration can mix a slider
+with an intrinsic-width Reset button, inputs, monitors or other bindings. Each row shares one
+complete search boundary. See the [inline row API](docs/api/rows.md) and
+[button API](docs/api/buttons.md) for configuration, typed item handles, state and disposal.
 
 ## Architecture
 

@@ -6,6 +6,7 @@ import type { SearchGroupNode, SearchMetadata, SearchNode, SearchTarget } from '
 export interface Row extends SearchTarget {
   readonly element: HTMLElement;
   readonly searchVisible: boolean;
+  onEligibilityChange: (() => void) | undefined;
   setVisible(visible: boolean): void;
   setParentDisabled(disabled: boolean): void;
   setParentHidden(hidden: boolean): void;

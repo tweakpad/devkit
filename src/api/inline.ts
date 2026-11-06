@@ -79,6 +79,8 @@ export class InlineRow extends SearchableRow {
         ]);
       },
     };
+    for (const { row } of contents.entries)
+      row.onEligibilityChange = () => this.refreshVisibility();
     this.setDisabled(params.disabled ?? false);
     this.setHidden(params.hidden ?? false);
   }
@@ -95,6 +97,7 @@ export class InlineRow extends SearchableRow {
     this.contents.setParentDisabled(disabled);
   }
   override dispose(): void {
+    for (const { row } of this.contents.entries) row.onEligibilityChange = undefined;
     this.contents.dispose();
     super.dispose();
   }

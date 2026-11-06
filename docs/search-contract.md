@@ -7,7 +7,7 @@ in `src/api/rows.ts`.
 
 ## Atomic controls
 
-A `SearchControlNode` registers explicit `SearchMetadata` (`name` and `label`) and one
+A `SearchControlNode` registers explicit `SearchMetadata` (`name`, `label`, and optional additional `terms`) and one
 `SearchTarget`. A query is trimmed and matched case-insensitively as a substring of either
 metadata field. Rendered text, live values, canvas contents and descendant elements are
 not search metadata. A placeholder and its mounted control have the same identity.
@@ -75,3 +75,7 @@ are added, removed or explicitly hidden.
 at `/demo/search-contract.html` checks that composed surfaces with strong display rules and
 nested shadow content disappear completely while an unrelated matching sibling stays visible.
 This fixture is independent of any particular monitor or control implementation.
+
+The public `addRow({ items })` API implements atomic composition for mixed controls. It
+registers eligible item metadata as additional terms and keeps one outer visibility owner.
+See [inline rows](api/rows.md) for a slider with Reset and a two-button example.
