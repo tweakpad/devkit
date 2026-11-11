@@ -1,3 +1,4 @@
+import { createPlotScheduler, type PlotScheduler } from '@tweakpad/ui/widgets';
 import type { Binding } from '../core/binding.js';
 import type { ColorPickerMode } from '../controls/color.js';
 import type { Job, Scheduler } from '../core/scheduler.js';
@@ -72,6 +73,7 @@ export class PaneContext {
   readonly #mounted = new Set<MountableRow>();
   readonly #chunks = new Map<Element, Chunk>();
   readonly #observer: IntersectionObserver;
+  #plotScheduler: PlotScheduler | undefined;
 
   constructor(
     readonly scheduler: Scheduler,
@@ -120,6 +122,14 @@ export class PaneContext {
     this.#mounted.delete(row);
   }
 
+  /**
+   * One paint scheduler for every graph of the pane: due plots take turns inside a shared
+   * per-frame budget instead of each requesting its own frames.
+   */
+  get plotScheduler(): PlotScheduler {
+    return (this.#plotScheduler ??= createPlotScheduler({ budgetMs: 1, maxPlotsPerFrame: 8 }));
+  }
+
   get mountedCount(): number {
     return this.#mounted.size;
   }
@@ -130,5 +140,7 @@ export class PaneContext {
     this.#mounted.clear();
     for (const binding of this.bindings) binding.dispose();
     this.bindings.clear();
+    this.#plotScheduler?.dispose();
+    this.#plotScheduler = undefined;
   }
 }

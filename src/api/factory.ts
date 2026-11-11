@@ -8,6 +8,7 @@ import {
   type ColorPickerMode,
 } from '../controls/color.js';
 import type { ControlView } from '../controls/library-view.js';
+import { frameRateFor } from '../graphs/graph-view.js';
 import { MonitorView, type MonitorOptions } from '../controls/monitor-view.js';
 import {
   BooleanView,
@@ -125,6 +126,7 @@ export function createControl(
         params.precision ?? 2,
         params.min,
         params.max,
+        { maxFrameRate: frameRateFor(interval), scheduler: () => context.plotScheduler },
       );
       return { binding, view, kind };
     }

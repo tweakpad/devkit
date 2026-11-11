@@ -6,6 +6,7 @@ import { checkButtonApi } from './button-api-checks.js';
 import { checkInlineApi } from './inline-api-checks.js';
 import { checkColorApi } from './color-api-checks.js';
 import { checkMonitorBindings } from './monitor-binding-checks.js';
+import { checkGraphs } from './graph-checks.js';
 
 /** Generic composition fixture: no dependency on any production control's rendering. */
 class ComposedRow extends SearchableRow {
@@ -93,6 +94,7 @@ try {
   checks.push(...(await checkInlineApi()));
   checks.push(...(await checkColorApi()));
   checks.push(...(await checkMonitorBindings()));
+  checks.push(...(await checkGraphs()));
   document.getElementById('result')!.textContent = `${checks.length} browser checks passed.`;
   document.body.dataset.result = 'passed';
 } catch (error) {

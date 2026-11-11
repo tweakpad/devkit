@@ -4,9 +4,9 @@ import { sunIcon } from '@tweakpad/ui/icons/sun';
 import { settingsIcon } from '@tweakpad/ui/icons/settings';
 import { folderIcon } from '@tweakpad/ui/icons/folder';
 
-const state = { fps: 60, speed: 0.6, size: 6, enabled: true };
+const state = { speed: 0.6, size: 6, enabled: true };
 const pane = new Pane({ title: 'Vertical tabs preview' });
-pane.addBinding(state, 'fps', { label: 'FPS', view: 'monitor' });
+pane.addPerformanceMonitor({ metrics: ['fps'] });
 const scene = pane.addTabs({
   orientation: 'vertical',
   pages: [

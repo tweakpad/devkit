@@ -24,7 +24,7 @@ const camera = tabs.pages[0].addFolder({ title: 'Lens' });
 camera.addBinding(params, 'fov', { min: 10, max: 120, step: 1 }).on('change', (e) => {});
 camera.addBinding(params, 'mode', { options: { Orbit: 'orbit', Fly: 'fly' } });
 camera.addBinding(params, 'tint', { color: { type: 'float' } }); // {r,g,b} in 0–1
-tabs.pages[1].addBinding(stats, 'fps', { view: 'monitor', monitor: { view: 'graph' }, min: 0, max: 144 });
+tabs.pages[1].addPerformanceMonitor(); // FPS and frame time, memory below
 ```
 
 ## Controls
@@ -43,6 +43,48 @@ The control is inferred from the value; `view` overrides the inference.
 Monitoring uses ordinary bindings with `view: 'monitor'`. The default text view and optional
 `monitor: { view: 'graph' }` numeric history use the same binding API, row composition,
 visibility and disposal contract as editors. See [monitor bindings](docs/api/monitoring.md).
+
+## Graphs and performance
+
+Three levels, from general to ready-made:
+
+1. **`addGraph`** plots any live numbers: one or more series, sampled through `read()` or fed
+   with `push()`, paged (click to cycle) or overlaid in one plot, with guides and header
+   markers. See [graphs](docs/api/graphs.md).
+2. **`addPerformanceMonitor`** stacks a frame graph (FPS, frame time) over a memory graph (JS
+   heap), measured by devkit or around your own loop with `begin()` and `end()`. See
+   [performance monitor](docs/api/performance.md).
+3. **Adapters** plug framework-specific metrics and markers into that monitor (draw calls, GPU
+   memory, triangle counts, a `WebGPU`/`WebGL` marker) without devkit depending on any framework.
+   Each metric names its graph, and `graphs` regroups them.
+
+```ts
+const monitor = pane.addPerformanceMonitor({
+  adapters: [
+    {
+      name: 'three',
+      markers: [
+        { id: 'backend', read: () => (renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL') },
+      ],
+      metrics: [
+        {
+          id: 'drawCalls',
+          label: 'Draw calls',
+          unit: 'calls',
+          precision: 0,
+          graph: 'frame',
+          read: () => renderer.info.render.calls,
+        },
+      ],
+    },
+  ],
+});
+```
+
+All graphs are drawn by `<tp-plot>` and stay on its incremental painting path: each series is
+normalized to its own range (fitted to the visible data, refitted only when it no longer
+suits), stable configuration objects, one shared paint scheduler per pane, and sampling only
+while visible.
 
 Color bindings accept `color: { picker: 'native' | 'tweakpad' }`. Set
 `new Pane({ colorPicker: 'tweakpad' })` to change the pane default; individual bindings can
@@ -79,7 +121,9 @@ complete search boundary. See the [inline row API](docs/api/rows.md) and
 ```
 src/core/      framework-free: Binding, Scheduler, equality, ring queue (unit tested)
 src/controls/  views wrapping library inline elements in controlled mode
-src/monitors/  text and graph monitors
+src/monitors/  text and graph monitor views for bindings
+src/graphs/    graph model (history, ranges, plot stream), view, row (tp-plot)
+src/perf/      frame meter and built-in performance metrics
 src/elements/  tweak-pane, tweak-folder, tweak-tabs, tweak-tab-page (Lit, chrome only)
 src/api/       the public imperative API, rows, chunks, visibility, mount LRU
 ```

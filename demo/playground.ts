@@ -15,7 +15,7 @@ const params = {
   caption: 'Orbit study',
   seed: 7,
 };
-const stats = { fps: 0, frameMs: 0, angle: 0 };
+const stats = { angle: 0 };
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -106,36 +106,21 @@ style.addBinding(params, 'blend', {
 });
 style.addBinding(params, 'trails', { label: 'Trails' });
 
-perf.addBinding(stats, 'fps', {
-  label: 'FPS',
-  view: 'monitor',
-  monitor: { view: 'graph' },
-  min: 0,
-  max: 144,
-  precision: 0,
-});
-perf.addBinding(stats, 'frameMs', { view: 'monitor', label: 'Frame (ms)', precision: 2 });
+// The default monitor: FPS and frame time, with memory below, measuring this app's own loop
+// through begin()/end().
+const monitor = perf.addPerformanceMonitor();
 perf.addBinding(stats, 'angle', { view: 'monitor', label: 'Angle', precision: 3, interval: 0 });
 
-Object.assign(window, { pane, params, stats });
+Object.assign(window, { pane, params, stats, monitor });
 
 let last = performance.now();
-let fpsAccum = 0;
-let fpsFrames = 0;
 function frame(now: number) {
   const dt = now - last;
   last = now;
-  fpsAccum += dt;
-  fpsFrames++;
-  if (fpsAccum >= 250) {
-    stats.fps = (fpsFrames * 1000) / fpsAccum;
-    fpsAccum = 0;
-    fpsFrames = 0;
-  }
-  const t0 = performance.now();
+  monitor.begin();
   if (!params.paused) stats.angle = (stats.angle + (dt / 1000) * params.speed) % (Math.PI * 2);
   draw();
-  stats.frameMs = performance.now() - t0;
+  monitor.end();
   requestAnimationFrame(frame);
 }
 

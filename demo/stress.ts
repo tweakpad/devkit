@@ -53,13 +53,20 @@ for (let i = 0; i < TOTAL; i++) {
 // A second pane: what the stress costs.
 const meter = { fps: 0, schedulerMs: 0, active: 0, mounted: 0, deferred: 0, heavy: 0 };
 const monitor = new Pane({ title: 'Meter', anchor: 'bottom-left', refresh: 'frame' });
-monitor.addBinding(meter, 'fps', {
-  label: 'FPS',
-  view: 'monitor',
-  monitor: { view: 'graph' },
-  min: 0,
-  max: 130,
-  precision: 0,
+// FPS and devkit's own frame cost, overlaid in one plot.
+monitor.addPerformanceMonitor({
+  layout: 'overlay',
+  metrics: [
+    'fps',
+    {
+      id: 'scheduler',
+      label: 'Scheduler',
+      unit: 'ms',
+      precision: 2,
+      min: 0,
+      read: () => pane.stats.duration,
+    },
+  ],
 });
 monitor.addBinding(meter, 'schedulerMs', {
   view: 'monitor',

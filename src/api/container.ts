@@ -13,6 +13,13 @@ import { Chunk, CHUNK_SIZE, type PaneContext, type Row } from './context.js';
 import { createControl, type BindingParams, type ControlKind } from './factory.js';
 import { ControlRow } from './rows.js';
 import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
+import { createGraph, GraphApi } from './graph.js';
+import {
+  createPerformanceMonitor,
+  PerformanceMonitorApi,
+  type PerformanceParams,
+} from './performance.js';
+import type { GraphParams } from '../graphs/types.js';
 import {
   InlineRow,
   InlineRowApi,
@@ -96,6 +103,34 @@ export class ContainerApi {
     const row = new ButtonRow(this.context, params);
     this.#addRow(row, row.metadata);
     const api = new ButtonApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /**
+   * Adds a live graph of one or more numeric series, fed by their `read()` functions or by
+   * `push()`. Several series are paged (click to cycle) or overlaid in one plot.
+   */
+  addGraph(params: GraphParams): GraphApi {
+    const row = createGraph(this.context, params);
+    if (params.disabled) row.setDisabled(true);
+    if (params.hidden) row.setHidden(true);
+    this.#addRow(row, row.metadata);
+    const api = new GraphApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /**
+   * Adds a performance monitor: stacked graphs fed by one frame meter. By default a frame graph
+   * (FPS, frame time) and, where measurable, a memory graph (JS heap). Frames are measured by
+   * devkit or around the application loop with `begin()`/`end()`; adapters add framework-specific
+   * metrics and markers, and `graphs` regroups everything.
+   */
+  addPerformanceMonitor(params: PerformanceParams = {}): PerformanceMonitorApi {
+    const created = createPerformanceMonitor(this.context, params);
+    for (const { row } of created.graphs) this.#addRow(row, row.metadata);
+    const api = new PerformanceMonitorApi(created, this.context, params.adapters);
     this.#children.push(api);
     return api;
   }

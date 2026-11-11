@@ -1,3 +1,4 @@
+import type { TpPlot } from '@tweakpad/ui/widgets';
 import { BindingApi, Pane, Scheduler } from '../src/index.js';
 
 /** Monitoring is a binding view; no separate factory, item type, API or sampler. */
@@ -59,9 +60,12 @@ export async function checkMonitorBindings(): Promise<string[]> {
       ],
     });
     await pane.element.updateComplete;
-    for (let i = 0; i < 60 && !mixed.element.querySelector('canvas'); i++) await frame();
-    await frame();
-    await frame();
+    const painted = () => {
+      const stats = graph.element.querySelector<TpPlot>('tp-plot')?.renderStats;
+      return stats ? stats.fullRedraws + stats.incrementalPaints : 0;
+    };
+    for (let i = 0; i < 60 && !mixed.element.querySelector('tp-plot'); i++) await frame();
+    for (let i = 0; i < 60 && painted() < 2; i++) await frame();
     check(!('addMonitor' in pane), 'there is no separate monitor creation API');
     check(
       text instanceof BindingApi &&
@@ -78,11 +82,11 @@ export async function checkMonitorBindings(): Promise<string[]> {
       'text monitor uses the binding value and precision',
     );
     check(scheduler.activeCount === 3, 'only the three normal bindings own sampling');
-    const canvas = graph.element.querySelector('canvas')!;
-    const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+    const plot = graph.element.querySelector<TpPlot>('tp-plot')!;
+    const history = plot.stream?.snapshot()['value'] ?? [];
     check(
-      pixels.some((channel, index) => index % 4 === 3 && channel > 0),
-      'unchanged values still produce a sampled history line',
+      history.length >= 2 && history.every(([, y]) => y === 0.6) && painted() >= 2,
+      'unchanged values still produce a sampled, painted history line',
     );
     const finished: number[] = [];
     text.on('finish', (event) => finished.push(event.value));

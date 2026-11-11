@@ -12,6 +12,7 @@ import {
   TpIcon,
   TpTooltip,
 } from '@tweakpad/ui';
+import { TpPlot } from '@tweakpad/ui/widgets';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakPane } from '../elements/pane.js';
 import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
@@ -37,6 +38,7 @@ export function registerElements(): void {
     TpTabs,
     TpIcon,
     TpTooltip,
+    TpPlot,
   ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
   for (const element of [TweakPane, TweakFolder, TweakTabs, TweakTabPage])

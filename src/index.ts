@@ -14,6 +14,28 @@ export type { ColorPickerMode, ColorObjectType } from './controls/color.js';
 export type { ColorFormat } from './controls/views.js';
 export type { MonitorOptions } from './controls/monitor-view.js';
 export { ButtonApi, type ButtonParams } from './api/buttons.js';
+export { GraphApi } from './api/graph.js';
+export type {
+  GraphGuide,
+  GraphHeaderContext,
+  GraphLayout,
+  GraphMarker,
+  GraphParams,
+  GraphSeries,
+  GraphSeriesSnapshot,
+} from './graphs/types.js';
+export { PerformanceMonitorApi, type PerformanceParams } from './api/performance.js';
+export type {
+  BuiltinMetricId,
+  BuiltinMetricOverride,
+  PerformanceGraphOptions,
+  PerformanceGraphs,
+  PerformanceAdapter,
+  PerformanceMetric,
+  PerformanceMetricDefinition,
+  PerformanceMonitorHandle,
+} from './perf/metrics.js';
+export type { FrameSample, FrameSource } from './perf/frame-meter.js';
 export {
   InlineRowApi,
   type InlineRowParams,
