@@ -64,12 +64,12 @@ const rendererAdapter: PerformanceAdapter = {
 const pane = new Pane({ title: 'Graphs' });
 
 // 2 + 3: the default monitor with a renderer adapter. Without `graphs`, each metric joins the
-// graph it names; here `graphs` lays them out explicitly, giving draw calls a graph of its own.
+// graph it names; here `graphs` lays them out explicitly: FPS and frame time overlaid on the
+// first page of the top graph, draw calls on its second page (click to switch), memory below.
 const monitor = pane.addPerformanceMonitor({
   adapters: [rendererAdapter],
   graphs: {
-    frame: ['fps', 'frameTime'],
-    calls: ['drawCalls'],
+    frame: { pages: [['fps', 'frameTime'], ['drawCalls']] },
     memory: ['heap', 'gpuMemory', 'triangles'],
   },
 });

@@ -195,26 +195,73 @@ export async function checkGraphs(): Promise<string[]> {
       adapters: [
         {
           name: 'counts',
-          metrics: [{ id: 'drawCalls', label: 'Draw calls', read: () => 10 }],
-          attach: (handle) => handle.report('drawCalls', 10),
+          metrics: [
+            { id: 'drawCalls', label: 'Draw calls', read: () => 10 },
+            { id: 'unlisted', label: 'Unlisted', read: () => 1 },
+          ],
+          attach: (handle) => handle.report('unlisted', 1),
         },
       ],
-      graphs: { frame: ['fps', 'frameTime'], extra: { metrics: ['missing'], layout: 'paged' } },
+      graphs: {
+        frame: ['fps'],
+        detail: { metrics: ['frameTime', 'drawCalls'], layout: 'paged' },
+        empty: ['missing'],
+      },
     });
-    await until(() => plotOf(custom.graphs[0]!) !== null);
-    const customPlot = plotOf(custom.graphs[0]!)!;
+    const [frameOnly, detail] = custom.graphs as [GraphApi, GraphApi];
+    await until(() => plotOf(frameOnly) !== null && plotOf(detail) !== null);
     check(
-      custom.graphNames.join() === 'frame' &&
-        customPlot.series.map((s) => s.id).join() === 'fps,frameTime',
+      custom.graphNames.join() === 'frame,detail' &&
+        plotOf(frameOnly)!
+          .series.map((s) => s.id)
+          .join() === 'fps',
       'graphs is the whole layout: unlisted adapter metrics and empty graphs are left out',
     );
+    const pagedRow = detail.element.querySelector<HTMLElement>('.monitor.graph')!;
+    pagedRow.click();
+    await frame();
     check(
-      (customPlot.series.find((s) => s.id === 'fps')?.fill || undefined)?.opacity === 0.3,
+      detail.pageCount === 2 &&
+        detail.page === 1 &&
+        plotOf(detail)!
+          .series.map((s) => s.id)
+          .join() === 'drawCalls' &&
+        pagedRow.getAttribute('role') === 'button' &&
+        !frameOnly.element.querySelector('.monitor.graph')!.hasAttribute('role'),
+      'one monitor mixes overlaid and paged graphs',
+    );
+    check(
+      (plotOf(frameOnly)!.series[0]!.fill || undefined)?.opacity === 0.3,
       'built-in metrics take overrides such as fill',
     );
-    custom.report('drawCalls', 5);
+    custom.report('unlisted', 5);
     check(true, 'reports for metrics left out are ignored');
     custom.dispose();
+
+    const mixed = pane.addPerformanceMonitor({
+      adapters: [
+        { name: 'calls', metrics: [{ id: 'drawCalls', label: 'Draw calls', read: () => 10 }] },
+      ],
+      graphs: {
+        frame: { pages: [['fps', 'frameTime'], ['drawCalls'], ['heap', 'missing'], ['missing']] },
+      },
+    });
+    const pagesGraph = mixed.graphs[0]!;
+    await until(() => plotOf(pagesGraph) !== null);
+    const firstPage = plotOf(pagesGraph)!
+      .series.map((s) => s.id)
+      .join();
+    pagesGraph.page = 1;
+    await frame();
+    check(
+      pagesGraph.pageCount === 3 &&
+        firstPage === 'fps,frameTime' &&
+        plotOf(pagesGraph)!
+          .series.map((s) => s.id)
+          .join() === 'drawCalls',
+      'a graph mixes overlaid and single-metric pages',
+    );
+    mixed.dispose();
 
     for (let i = 0; i < 20; i++) {
       monitor.begin();

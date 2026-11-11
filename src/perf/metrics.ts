@@ -33,10 +33,17 @@ export type PerformanceMetric =
   BuiltinMetricId | BuiltinMetricOverride | PerformanceMetricDefinition;
 
 /** One stacked graph: its metric ids in order, and how they share the graph. */
+/** One stacked graph: its metric ids, and how they share the graph. Give `metrics` or `pages`. */
 export interface PerformanceGraphOptions {
-  metrics: readonly string[];
-  /** `'overlay'` (default: the monitor's `layout`) or `'paged'`. */
+  /** Metric ids in order, overlaid or paged as `layout` says. */
+  metrics?: readonly string[];
+  /** `'overlay'` (default: the monitor's `layout`) or `'paged'`. Ignored with `pages`. */
   layout?: GraphLayout;
+  /**
+   * Explicit pages of metric ids, e.g. `[['fps', 'frameTime'], ['drawCalls']]`: each page
+   * overlays its metrics, and clicking the graph shows the next page.
+   */
+  pages?: readonly (readonly string[])[];
 }
 
 /** Stacked graphs by name, top to bottom: metric ids, or options with them. */
@@ -157,6 +164,8 @@ export interface MetricGroup {
   name: string;
   metrics: PerformanceMetricDefinition[];
   layout: GraphLayout | undefined;
+  /** Explicit pages, limited to the metrics placed in this graph. */
+  pages: string[][] | undefined;
 }
 
 /**
@@ -180,20 +189,26 @@ export function groupMetrics(
       const options: PerformanceGraphOptions = Array.isArray(spec)
         ? { metrics: spec as readonly string[] }
         : (spec as PerformanceGraphOptions);
+      if (!options.metrics === !options.pages)
+        throw new TypeError(`devkit: graph ${name} needs either metrics or pages`);
       const group: PerformanceMetricDefinition[] = [];
-      for (const id of options.metrics) {
-        const metric = byId.get(id);
-        if (!metric || placed.has(id)) continue;
-        placed.add(id);
-        group.push(metric);
-      }
-      groups.push({ name, metrics: group, layout: options.layout });
+      const take = (ids: readonly string[]): string[] =>
+        ids.filter((id) => {
+          const metric = byId.get(id);
+          if (!metric || placed.has(id)) return false;
+          placed.add(id);
+          group.push(metric);
+          return true;
+        });
+      const pages = options.pages?.map(take).filter((page) => page.length > 0);
+      if (options.metrics) take(options.metrics);
+      groups.push({ name, metrics: group, layout: options.layout, pages });
     }
   } else {
     for (const metric of metrics) {
       const name = metric.graph ?? FRAME_GRAPH;
       let group = groups.find((g) => g.name === name);
-      if (!group) groups.push((group = { name, metrics: [], layout: undefined }));
+      if (!group) groups.push((group = { name, metrics: [], layout: undefined, pages: undefined }));
       group.metrics.push(metric);
     }
   }

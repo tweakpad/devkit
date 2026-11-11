@@ -74,6 +74,20 @@ describe('performance metrics', () => {
     expect(groups.map((g) => g.layout)).toEqual([undefined, 'paged']);
   });
 
+  it('takes explicit pages in a graph, dropping unavailable ids and empty pages', () => {
+    withHeap(false);
+    const calls = { id: 'drawCalls', label: 'Draw calls' };
+    const [group] = groupMetrics([...resolveDefaults(), calls], {
+      frame: { pages: [['fps', 'frameTime'], ['drawCalls'], ['heap']] },
+    });
+    expect(group!.pages).toEqual([['fps', 'frameTime'], ['drawCalls']]);
+    expect(group!.metrics.map((m) => m.id)).toEqual(['fps', 'frameTime', 'drawCalls']);
+    expect(() => groupMetrics([calls], { frame: {} })).toThrow(TypeError);
+    expect(() =>
+      groupMetrics([calls], { frame: { metrics: ['drawCalls'], pages: [['drawCalls']] } }),
+    ).toThrow(TypeError);
+  });
+
   it('merges overrides onto built-ins', () => {
     const fps = resolveMetric({ id: 'fps', fill: 0.2, color: '#22d3ee' })!;
     expect([fps.label, fps.fill, fps.color, typeof fps.sample]).toEqual([

@@ -28,7 +28,7 @@ export interface PerformanceParams extends Omit<
   metrics?: readonly PerformanceMetric[];
   /**
    * The whole layout: stacked graphs by name, top to bottom, each listing metric ids in order,
-   * e.g. `{ frame: ['fps', 'frameTime'], calls: { metrics: ['drawCalls'], layout: 'paged' } }`.
+   * e.g. `{ frame: { pages: [['fps', 'frameTime'], ['drawCalls']] }, memory: ['heap'] }`.
    * Metrics not listed are left out, adapters' included; ids that are not available (such as
    * `heap` outside Chromium) are skipped. Default: one graph per metric `graph` name.
    */
@@ -126,10 +126,11 @@ export function createPerformanceMonitor(
     ...(params.adapters ?? []).flatMap((adapter) => adapter.markers ?? []),
   ];
   const label = params.label ?? 'Performance';
-  const graphs = groups.map(({ name, metrics: group, layout }, index): PerformanceGraph => {
+  const graphs = groups.map(({ name, metrics: group, layout, pages }, index): PerformanceGraph => {
     const model = createGraphModel(group.map(toSeries), {
       bufferSize: params.bufferSize,
       layout: layout ?? params.layout ?? 'overlay',
+      pages,
       markers: index === 0 ? markers : undefined,
     });
     ticker.models.push(model);

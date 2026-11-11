@@ -59,6 +59,18 @@ pane.addPerformanceMonitor({
   with no metrics is not shown.
 - A graph's `layout` overrides the monitor's `layout` (default `'overlay'`): `'paged'` shows
   one metric at a time; click to show the next.
+- A graph's `pages` mixes both: each page overlays its metrics, and clicking shows the next
+  page. Unavailable ids are skipped and pages left empty are dropped.
+
+```ts
+pane.addPerformanceMonitor({
+  adapters: [rendererAdapter],
+  graphs: {
+    frame: { pages: [['fps', 'frameTime'], ['drawCalls']] },
+    memory: ['heap', 'gpuMemory', 'triangles'],
+  },
+});
+```
 
 ## Changing built-in metrics
 
