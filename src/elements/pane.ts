@@ -1,4 +1,4 @@
-import { css, html, LitElement } from 'lit';
+import { css, html, LitElement, type TemplateResult } from 'lit';
 import { chevronDownIcon } from '@tweakpad/ui/icons/chevron-down';
 import type { TpInput } from '@tweakpad/ui';
 import { icon, searchIcon } from './icons.js';
@@ -326,7 +326,7 @@ export class TweakPane extends LitElement {
     return { x: this.#offsetX, y: this.#offsetY };
   }
 
-  protected override render() {
+  protected override render(): TemplateResult {
     return html`<div class="panel" part="panel">
       <div
         class="header"

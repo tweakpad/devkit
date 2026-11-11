@@ -105,8 +105,20 @@ actions.addButton({
 actions.addRow({
   name: 'playback',
   items: [
-    { type: 'button', title: 'Pause', onClick: () => { params.paused = true; } },
-    { type: 'button', title: 'Resume', onClick: () => { params.paused = false; } },
+    {
+      type: 'button',
+      title: 'Pause',
+      onClick: () => {
+        params.paused = true;
+      },
+    },
+    {
+      type: 'button',
+      title: 'Resume',
+      onClick: () => {
+        params.paused = false;
+      },
+    },
   ],
 });
 ```

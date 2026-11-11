@@ -1,4 +1,4 @@
-import { css, html, LitElement, type PropertyValues } from 'lit';
+import { css, html, LitElement, type PropertyValues, type TemplateResult } from 'lit';
 import { chevronDownIcon } from '@tweakpad/ui/icons/chevron-down';
 import { icon } from './icons.js';
 import { containerStyles } from './styles.js';
@@ -198,7 +198,7 @@ export class TweakFolder extends LitElement {
     clearTimeout(this.#hideTimer);
   }
 
-  protected override render() {
+  protected override render(): TemplateResult {
     return html`<button
         class="header"
         part="header"

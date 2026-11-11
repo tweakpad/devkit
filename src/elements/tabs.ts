@@ -1,4 +1,4 @@
-import { css, html, nothing, LitElement, type PropertyValues } from 'lit';
+import { css, html, nothing, LitElement, type PropertyValues, type TemplateResult } from 'lit';
 import type { TpTabs, TpTooltip, IconDefinition, TpValueChangeEvent } from '@tweakpad/ui';
 import { containerStyles } from './styles.js';
 
@@ -40,7 +40,7 @@ export class TweakTabPage extends LitElement {
     this.body.className = 'body';
   }
 
-  protected override render() {
+  protected override render(): TemplateResult {
     return html`${this.body}`;
   }
 }
@@ -382,7 +382,7 @@ export class TweakTabs extends LitElement {
     });
   }
 
-  protected override render() {
+  protected override render(): TemplateResult {
     return html`<tp-tabs
         .orientation=${this.orientation}
         .value=${String(this.selected)}
