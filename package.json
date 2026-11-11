@@ -1,6 +1,6 @@
 {
   "name": "@tweakpad/devkit",
-  "version": "0.0.0-stage",
+  "version": "0.0.1",
   "description": "High-performance tweak panel for tuning live values, built on @tweakpad/ui inline controls.",
   "license": "MIT",
   "author": "Tweakpad",
