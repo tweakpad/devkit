@@ -20,6 +20,7 @@ import {
   type ColorFormat,
   type SelectItem,
 } from '../controls/views.js';
+import type { ControlDescriptor } from '../history/types.js';
 import type { PaneContext } from './context.js';
 
 export type ControlKind =
@@ -58,6 +59,13 @@ export interface BindingParams {
   interval?: number;
   disabled?: boolean;
   hidden?: boolean;
+  /**
+   * Stable name in the pane's history, in place of the property key. Keeps stored values when
+   * the key or label changes, and tells apart bindings of the same key in one container.
+   */
+  id?: string;
+  /** Set false to leave this binding out of the pane's history. Default true. */
+  history?: boolean;
 }
 
 export function toItems(options: OptionList): SelectItem[] {
@@ -92,6 +100,8 @@ export interface CreatedControl {
   binding: Binding<unknown>;
   view: ControlView<unknown>;
   kind: ControlKind;
+  /** What the value is, for the history; null for monitors, which are not recorded. */
+  descriptor: ControlDescriptor | null;
 }
 
 export function createControl(
@@ -128,7 +138,7 @@ export function createControl(
         params.max,
         { maxFrameRate: frameRateFor(interval), scheduler: () => context.plotScheduler },
       );
-      return { binding, view, kind };
+      return { binding, view, kind, descriptor: null };
     }
     case 'slider':
     case 'number': {
@@ -143,18 +153,20 @@ export function createControl(
         kind === 'slider'
           ? new SliderView(binding, label, spec)
           : new NumberView(binding, label, spec);
-      return { binding, view, kind } as unknown as CreatedControl;
+      const descriptor = { type: 'number', min: params.min, max: params.max } as const;
+      return { binding, view, kind, descriptor } as unknown as CreatedControl;
     }
     case 'checkbox':
     case 'switch': {
       const binding = make<boolean>();
       const view = new BooleanView(binding, label, kind === 'switch' ? 'tp-switch' : 'tp-checkbox');
-      return { binding, view, kind } as unknown as CreatedControl;
+      return { binding, view, kind, descriptor: { type: 'boolean' } } as unknown as CreatedControl;
     }
     case 'select': {
       const binding = make<unknown>();
-      const view = new SelectView(binding, label, toItems(params.options ?? []));
-      return { binding, view, kind };
+      const items = toItems(params.options ?? []);
+      const view = new SelectView(binding, label, items);
+      return { binding, view, kind, descriptor: { type: 'option', items } };
     }
     case 'color': {
       const objectValue = isColorObject(raw);
@@ -166,12 +178,13 @@ export function createControl(
         format: objectValue ? 'hex' : params.color?.format,
         alpha: objectValue ? false : params.color?.alpha,
       });
-      return { binding, view, kind } as unknown as CreatedControl;
+      const descriptor = { type: 'color', object: objectValue } as const;
+      return { binding, view, kind, descriptor } as unknown as CreatedControl;
     }
     case 'text': {
       const binding = make<string>();
       const view = new TextView(binding, label);
-      return { binding, view, kind } as unknown as CreatedControl;
+      return { binding, view, kind, descriptor: { type: 'string' } } as unknown as CreatedControl;
     }
   }
 }

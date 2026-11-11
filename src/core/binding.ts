@@ -169,6 +169,14 @@ export class Binding<T> implements Sampler, Writer {
     if (this.#view) this.#scheduler.enqueueWrite(this);
   }
 
+  /** A value applied without announcing it, like a code default (e.g. restored from history). */
+  load(value: T): void {
+    if (this.#disposed) return;
+    this.value = value;
+    this.#assign(value);
+    if (this.#view) this.#scheduler.enqueueWrite(this);
+  }
+
   /** The interaction finished (release, Enter, blur): fires `finish` with the current value. */
   commit(): void {
     if (this.#disposed) return;

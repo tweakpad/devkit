@@ -116,6 +116,15 @@ with an intrinsic-width Reset button, inputs, monitors or other bindings. Each r
 complete search boundary. See the [inline row API](docs/api/rows.md) and
 [button API](docs/api/buttons.md) for configuration, typed item handles, state and disposal.
 
+## Version history
+
+`new Pane({ history: true })` keeps the control values in versions, in `localStorage` or in memory.
+Every finished edit goes to the working version's log. `history.advance()` freezes the working
+version, or `mode: 'auto'` does it on each reload that follows real edits, never making identical
+duplicates. Stored values are applied best effort when the controls change: what still fits is
+restored, and renamed or retyped controls keep their code values. See
+[version history](docs/api/history.md).
+
 ## Architecture
 
 ```
@@ -124,6 +133,7 @@ src/controls/  views wrapping library inline elements in controlled mode
 src/monitors/  text and graph monitor views for bindings
 src/graphs/    graph model (history, ranges, plot stream), view, row (tp-plot)
 src/perf/      frame meter and built-in performance metrics
+src/history/   version history: paths, value codec, document format, storage (unit tested)
 src/elements/  tweak-pane, tweak-folder, tweak-tabs, tweak-tab-page (Lit, chrome only)
 src/api/       the public imperative API, rows, chunks, visibility, mount LRU
 ```

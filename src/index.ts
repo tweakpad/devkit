@@ -43,6 +43,20 @@ export {
   type InlineBindingItem,
   type InlineButtonItem,
 } from './api/inline.js';
+export { HistoryApi } from './api/history.js';
+export type {
+  HistoryChange,
+  HistoryDiff,
+  HistoryDocument,
+  HistoryMode,
+  HistoryOptions,
+  HistoryStorage,
+  HistoryValue,
+  HistoryVersion,
+  StoredChange,
+  StoredValue,
+  StoredVersion,
+} from './history/types.js';
 export type { ChangeEvent, ChangeListener } from './core/binding.js';
 export { Scheduler, type FrameStats, type SchedulerOptions } from './core/scheduler.js';
 export { registerElements } from './controls/register.js';

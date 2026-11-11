@@ -32,10 +32,14 @@ import {
 export interface FolderParams {
   title: string;
   expanded?: boolean;
+  /** Stable name in the pane's history paths, in place of the title. */
+  id?: string;
 }
 
 export interface TabPageParams {
   title: string;
+  /** Stable name in the pane's history paths, in place of the title. */
+  id?: string;
   icon?: IconDefinition;
   color?: string;
   hint?: string;
@@ -70,6 +74,8 @@ export class ContainerApi {
     protected readonly body: HTMLElement,
     setFiltered?: (filtered: boolean) => void,
     private readonly inline = false,
+    /** Where this container sits in history paths: folder and tab page names from the root. */
+    protected readonly path: readonly string[] = [],
   ) {
     this.searchNode = setFiltered
       ? { kind: 'group', children: this.#searchChildren, hideWhenEmpty: 'searching', setFiltered }
@@ -82,7 +88,20 @@ export class ContainerApi {
     key: K,
     params: BindingParams = {},
   ): BindingApi<T[K]> {
-    const { binding, view, kind } = createControl(this.context, target, key, params);
+    const { binding, view, kind, descriptor } = createControl(this.context, target, key, params);
+    const history = this.context.history;
+    const leaf = params.id ?? (typeof key === 'symbol' ? undefined : String(key));
+    // Applies a stored value before the row exists, so the control first shows it.
+    const untrack =
+      history && descriptor && leaf !== undefined && params.history !== false
+        ? history.track(this.path, leaf, {
+            descriptor,
+            read: () => binding.value,
+            load: (value) => binding.load(value),
+            set: (value) => binding.set(value),
+            onFinish: (listener) => binding.on('finish', (event) => listener(event.value)),
+          })
+        : undefined;
     const row = new ControlRow(this.context, binding, view, params.label ?? String(key));
     if (params.disabled) row.setDisabled(true);
     if (params.hidden) row.setHidden(true);
@@ -93,6 +112,7 @@ export class ContainerApi {
       row as unknown as ControlRow<T[K]>,
       kind,
       this.context,
+      untrack,
     );
     this.#children.push(api);
     return api;
@@ -153,7 +173,7 @@ export class ContainerApi {
     }
     const surface = document.createElement('div');
     surface.className = 'inline-row';
-    const content = new ContainerApi(this.context, surface, undefined, true);
+    const content = new ContainerApi(this.context, surface, undefined, true, this.path);
     try {
       const items = params.items.map((item) => {
         const api =
@@ -192,7 +212,7 @@ export class ContainerApi {
     element.heading = params.title;
     element.open = params.expanded ?? true;
     this.#addBlock(element);
-    const folder = new FolderApi(this.context, element);
+    const folder = new FolderApi(this.context, element, [...this.path, params.id ?? params.title]);
     this.#children.push(folder);
     this.#searchChildren.add(folder.searchNode);
     this.context.refreshSearch?.();
@@ -212,10 +232,10 @@ export class ContainerApi {
     element.pageOptions = params.pages;
     element.labels = params.pages.map((page) => page.title);
     element.selected = params.selected ?? 0;
-    const pages = params.pages.map(() => {
+    const pages = params.pages.map((params) => {
       const page = document.createElement(TweakTabPage.tagName) as TweakTabPage;
       element.append(page);
-      return new TabPageApi(this.context, page);
+      return new TabPageApi(this.context, page, [...this.path, params.id ?? params.title]);
     });
     element.syncPages();
     this.#addBlock(element);
@@ -275,10 +295,17 @@ export class FolderApi extends ContainerApi {
   constructor(
     context: PaneContext,
     readonly element: TweakFolder,
+    path: readonly string[] = [],
   ) {
-    super(context, element.body, (filtered) => {
-      element.hidden = filtered;
-    });
+    super(
+      context,
+      element.body,
+      (filtered) => {
+        element.hidden = filtered;
+      },
+      false,
+      path,
+    );
   }
 
   get title(): string {
@@ -307,8 +334,9 @@ export class TabPageApi extends ContainerApi {
   constructor(
     context: PaneContext,
     readonly element: TweakTabPage,
+    path: readonly string[] = [],
   ) {
-    super(context, element.body);
+    super(context, element.body, undefined, false, path);
   }
 }
 
@@ -346,6 +374,7 @@ export class BindingApi<T> {
     private readonly row: ControlRow<T>,
     readonly kind: ControlKind,
     private readonly context: PaneContext,
+    private readonly untrack?: () => void,
   ) {}
 
   /** The value last shown or set. */
@@ -395,6 +424,7 @@ export class BindingApi<T> {
   }
 
   dispose(): void {
+    this.untrack?.();
     this.context.bindings.delete(this.binding as Binding<unknown>);
     this.row.dispose();
     this.context.refreshSearch?.();

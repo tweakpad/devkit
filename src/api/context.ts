@@ -1,6 +1,7 @@
 import { createPlotScheduler, type PlotScheduler } from '@tweakpad/ui/widgets';
 import type { Binding } from '../core/binding.js';
 import type { ColorPickerMode } from '../controls/color.js';
+import type { History } from '../history/history.js';
 import type { Job, Scheduler } from '../core/scheduler.js';
 import type { SearchGroupNode, SearchMetadata, SearchNode, SearchTarget } from '../core/search.js';
 
@@ -82,6 +83,8 @@ export class PaneContext {
     /** Default sampling interval for input bindings: 0 every frame, -1 manual. */
     readonly interval: number,
     readonly colorPicker: ColorPickerMode = 'native',
+    /** Versions of the pane's control values; null when the pane has no history. */
+    readonly history: History | null = null,
   ) {
     this.#observer = new IntersectionObserver(
       (entries) => {

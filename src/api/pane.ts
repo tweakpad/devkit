@@ -4,6 +4,8 @@ import { TweakPane, type PaneAnchor } from '../elements/pane.js';
 import { ContainerApi } from './container.js';
 import { PaneContext } from './context.js';
 import type { ColorPickerMode } from '../controls/color.js';
+import type { HistoryOptions } from '../history/types.js';
+import { createHistory, HistoryApi } from './history.js';
 
 export interface PaneOptions {
   /** Default color picker for all bindings, including inline rows. Default 'native'. */
@@ -26,6 +28,11 @@ export interface PaneOptions {
   maxMounted?: number;
   /** A scheduler of its own (e.g. a separate frame budget); by default all panes share one. */
   scheduler?: Scheduler;
+  /**
+   * Keeps versions of the control values. `true`: in `localStorage` under the pane title, one
+   * working version until `history.advance()`. Off by default, and then costs nothing.
+   */
+  history?: boolean | HistoryOptions;
 }
 
 /**
@@ -41,20 +48,26 @@ export interface PaneOptions {
 export class Pane extends ContainerApi {
   protected override readonly supportsVerticalTabs = true;
   readonly element: TweakPane;
+  /** Versions of the control values; null unless the `history` option is set. */
+  readonly history: HistoryApi | null;
 
   constructor(options: PaneOptions = {}) {
     registerElements();
     const refresh = options.refresh ?? 'frame';
     const interval = refresh === 'frame' ? 0 : refresh === 'manual' ? -1 : Math.max(0, refresh);
+    // Read before any control exists, so each one starts with its stored value.
+    const history = createHistory(options.history, options.title);
     const context = new PaneContext(
       options.scheduler ?? sharedScheduler(),
       options.maxMounted ?? 300,
       interval,
       options.colorPicker ?? 'native',
+      history,
     );
     const element = document.createElement(TweakPane.tagName) as TweakPane;
     super(context, element.body);
     this.element = element;
+    this.history = history && new HistoryApi(history);
     context.refreshSearch = () => {
       if (element.searchQuery.trim()) this.#onSearch();
     };
@@ -99,6 +112,7 @@ export class Pane extends ContainerApi {
     this.element.removeEventListener('tweak-search', this.#onSearch);
     this.context.refreshSearch = undefined;
     super.dispose();
+    this.history?.dispose();
     this.context.dispose();
     this.element.remove();
   }
