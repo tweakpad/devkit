@@ -386,8 +386,9 @@ export class TweakTabs extends LitElement {
     return html`<tp-tabs
         .orientation=${this.orientation}
         .value=${String(this.selected)}
+        ?full-width=${this.orientation !== 'vertical'}
         .partPresentation=${{
-          // Preview full-width tabs before moving this layout option into the library.
+          // The vertical icon rail.
           'tabs-list': {
             styleHook:
               this.orientation === 'vertical'
@@ -398,7 +399,7 @@ export class TweakTabs extends LitElement {
                     background: 'transparent',
                     overflow: 'visible',
                   }
-                : { 'inline-size': '100%' },
+                : {},
           },
           'tabs-indicator': {
             styleHook: this.orientation === 'vertical' ? { display: 'none' } : {},
@@ -412,7 +413,7 @@ export class TweakTabs extends LitElement {
                     padding: '0',
                     'box-sizing': 'border-box',
                   }
-                : { flex: '1 1 0' },
+                : {},
           },
         }}
         @tp-value-change=${this.#onSelect}
@@ -433,7 +434,9 @@ export class TweakTabs extends LitElement {
               this.orientation === 'vertical'
                 ? html`<tp-tooltip
                     .collisionAvoidance=${{ side: 'none', align: 'shift' }}
-                    .partPresentation=${{ 'tooltip-content': { styleHook: { 'max-inline-size': 'min(16rem, var(--tp-available-width))', 'white-space': 'normal', 'overflow-wrap': 'anywhere' } } }}
+                    wrap
+                    max-width="16rem"
+                    .partPresentation=${{ 'tooltip-content': { styleHook: { 'overflow-wrap': 'anywhere' } } }}
                     describes="none"
                     >${this.pageOptions[index]?.hint ?? label}</tp-tooltip
                   >`
