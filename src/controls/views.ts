@@ -198,6 +198,7 @@ export class SelectView extends LibraryView<unknown> {
   }
 }
 
+/** Notation of a CSS color string, as shown in the control and written to the property. */
 export type ColorFormat = 'hex' | 'rgb' | 'hsl' | 'oklch';
 
 /** A CSS color string: tp-color-input, inline. */

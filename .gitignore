@@ -5,3 +5,4 @@ coverage/
 *.log
 tmp/
 .env
+storybook-static/

@@ -1,0 +1,251 @@
+---
+title: Version history
+description: Stored versions of a pane's control values, so a setup survives reloads and earlier setups come back.
+symbol: new Pane({ history })
+api: [HistoryOptions, HistoryApi, HistoryStorage, HistoryMode, HistoryVersion, HistoryChange, HistoryDiff, HistoryValue, HistoryDocument, StoredValue, StoredChange, StoredVersion]
+---
+
+<Preview
+  title="Version history"
+  code={`<div id="history-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const grade = { exposure: 1.2, contrast: 0.35, saturation: 1 };
+const status = { saved: 'None yet' };
+const pane = new Pane({
+  container: document.getElementById('history-hero'),
+  title: 'Color grade',
+  history: { storage: 'memory', key: 'docs-history-hero' },
+});
+pane.addBinding(grade, 'exposure', { min: 0, max: 4 });
+pane.addBinding(grade, 'contrast', { min: 0, max: 1 });
+pane.addBinding(grade, 'saturation', { min: 0, max: 2 });
+pane.addBinding(status, 'saved', { label: 'Last saved', view: 'monitor' });
+pane.addRow({
+  items: [
+    {
+      type: 'button',
+      title: 'Save version',
+      onClick: () => {
+        status.saved = 'Version ' + pane.history.advance().id;
+      },
+    },
+    {
+      type: 'button',
+      title: 'Restore saved',
+      onClick: () => {
+        const saved = pane.history.versions.filter((version) => version.frozen).at(-1);
+        if (saved) pane.history.restore(saved.id);
+      },
+    },
+  ],
+});`}
+/>
+
+## Usage
+
+A pane can keep versions of its control values, so a setup survives reloads and an earlier setup
+can be brought back. History is off unless the `history` option is set; while it is off, nothing
+listens and nothing touches storage. `history: true` keeps versions in local storage under the
+pane's title, and each binding added afterwards starts from its stored value, if it has one.
+
+<Code
+  code={`const pane = new Pane({ title: 'Scene', history: true });
+pane.addBinding(params, 'speed', { min: 0, max: 10 });
+
+pane.history!.advance('before lighting pass');
+pane.history!.restore(1);`}
+  language="ts"
+/>
+
+### The working version
+
+The last version is the working version, and it takes every finished edit: a released drag, an
+**Enter** or blur in a text field, a pick, or `api.value = x` from code. Each edit updates the
+version's values and is logged with the value it replaced, so the log can back an undo. The
+working version records every tracked control's value, so any version is a whole setup, not just
+the fields that were edited. Only values are kept: which folders are open, which tab is selected
+and where the pane sits are not stored.
+
+### Saving versions
+
+`advance()` freezes the working version, optionally with a label, and continues in a copy of it.
+Frozen versions never change. When the values are the same as the newest frozen version's,
+`advance()` returns that version instead of making a duplicate. Frozen versions can be renamed and
+deleted, and `clear()` drops every version and starts a new working version from the controls'
+current values.
+
+<Code
+  code={`const draft = pane.history!.advance('Warm sunset');
+pane.history!.rename(draft.id, 'Warm sunset, softer shadows');
+pane.history!.delete(1);`}
+  language="ts"
+/>
+
+### Restoring
+
+`restore(id)` applies a version's values to the controls and announces each change, so your
+application reacts as if the user had made it. The restored values are recorded in the working
+version as one group. `diff()` compares two versions, or one version with the working version,
+as the paths added, removed and changed between them.
+
+<Code
+  code={`const { changed } = pane.history!.diff(3);
+for (const { path, from, to } of changed) console.log(path, from, '→', to);
+pane.history!.restore(3);`}
+  language="ts"
+/>
+
+### Sessions
+
+A session is the time between two reloads. Versions are made per session, never per edit. In the
+default manual mode, every session keeps adding to the same working version until `advance()`. In
+`'auto'` mode, the previous session becomes a version of its own when the page loads, so each
+visit can be found again.
+
+An automatic version is made only when the previous session edited something and ended on
+different values. Sessions without edits, sessions whose edits were reverted and sessions that
+only gained new controls make no version.
+
+<Code
+  code={`const pane = new Pane({ title: 'Terrain', history: { mode: 'auto' } });`}
+  language="ts"
+/>
+
+### Storage
+
+Local storage survives reloads. Each history is stored under `devkit:history:<key>`, where the key
+defaults to the pane title, or `'pane'` without one, so give panes with the same title different
+keys. Where local storage is blocked, such as in sandboxed frames or some private modes, the
+history falls back to memory with a warning.
+
+Memory storage survives disposing and recreating a pane on the same page, as hot module
+replacement does, but a reload loses it, so `'auto'` mode keeps a single version there. Any
+synchronous object with `read`, `write` and `remove` can stand in as your own storage.
+
+<Code
+  code={`const pane = new Pane({
+  title: 'Scene',
+  history: {
+    key: 'scene-editor',
+    storage: {
+      read: (key) => sessionStorage.getItem(key),
+      write: (key, data) => sessionStorage.setItem(key, data),
+      remove: (key) => sessionStorage.removeItem(key),
+    },
+  },
+});`}
+  language="ts"
+/>
+
+### Writing to storage
+
+Writes happen at most every 500 ms. They are also flushed when the page is hidden or closed, on
+`history.save()` and on `pane.dispose()`. The oldest frozen versions and the oldest logged changes
+go first once a history passes its limits. When storage is full, the history first drops the logs
+of frozen versions, then the older half of the frozen versions, and warns. Two tabs with the same
+key overwrite each other: the last write wins.
+
+### Control identity
+
+Values are stored by path: the folder and tab page names from the root, then the property key,
+such as `Lighting/Sun/intensity`. Names are escaped like a JSON pointer, `~` as `~0` and `/` as
+`~1`. Controls in an inline row take the path of the row's container.
+
+An `id` on a binding, folder or tab page is used in place of its key or title. Its stored values
+then survive renames, and two bindings of the same key in one container stay apart. Without an
+`id`, a later binding with the same path gets `#2`, `#3` and so on, in the order they are added,
+plus a one-time warning.
+
+Only editable bindings are tracked. Monitors and buttons are not, and `history: false` leaves a
+binding out.
+
+<Code
+  code={`const sun = pane.addFolder({ title: 'Sun light', id: 'sun' });
+sun.addBinding(light, 'intensity', { id: 'power' }); // stored as sun/power
+sun.addBinding(debug, 'seed', { history: false }); // never stored`}
+  language="ts"
+/>
+
+### Loading stored values
+
+Loading is best effort and never fails because the controls changed. When a control is added, its
+stored value is applied if it still fits; otherwise the control keeps its value from code. A
+stored value is applied without announcing a change, like a default set in code, and the control
+first appears with it. A control added later, after async setup or behind a condition, still gets
+its value.
+
+Values are judged by value, not by control type, so a slider that became a number field keeps its
+value, and so does a pick that became a slider.
+
+| Stored        | Control          | Result                                                                      |
+| ------------- | ---------------- | --------------------------------------------------------------------------- |
+| number        | slider, number   | Applied, clamped to the control's `min` and `max`.                          |
+| boolean       | checkbox, switch | Applied.                                                                    |
+| string        | text             | Applied.                                                                    |
+| color string  | color            | Applied when it parses as a color. `{r, g, b}` objects take `#rrggbb` only. |
+| pick          | select           | Matched by value first, then by label, so renumbered options still match.   |
+| anything else | any              | Skipped: the control keeps its value from code.                             |
+
+The stored values of renamed or removed controls are kept but never applied, and a control that
+comes back under the same path gets its value again. `prune()` drops the values that no control
+has now.
+
+### Listening for changes
+
+`on('change')` reports each finished edit and each restored value, with its path, the value before
+and after, and whether it came from an edit or a restore; the changes of one restore share a
+group. `on('version')` reports changes to the version list and its labels. While `enabled` is
+false, edits are neither recorded nor saved, which suits changes your application makes in bulk.
+
+<Preview
+  title="Listening for changes"
+  code={`<div id="history-changes"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const fog = { start: 20, distance: 120 };
+const log = { last: 'No edits yet' };
+const pane = new Pane({
+  container: document.getElementById('history-changes'),
+  title: 'Fog',
+  history: { storage: 'memory', key: 'docs-history-changes' },
+});
+pane.addBinding(fog, 'start', { min: 0, max: 100, step: 5 });
+pane.addBinding(fog, 'distance', { min: 10, max: 500, step: 10 });
+pane.addBinding(log, 'last', { label: 'Last change', view: 'monitor' });
+pane.history.on('change', (change) => {
+  log.last = change.path + ': ' + (change.from ?? '—') + ' → ' + change.to;
+});`}
+/>
+
+### Export and import
+
+`export()` returns the whole history as a JSON-safe document, and `import()` replaces the history
+with a document or its JSON text, then applies its working version. Times are epoch milliseconds.
+A value is a JSON primitive; a pick is stored as its value, or `null` when the value is not a JSON
+primitive, together with its label, and versions report such a pick by its label. A change keeps
+its path, the value it replaced, its new value and its time; restored values also carry the
+restore marker and the group they share.
+
+<Code
+  code={`{
+  "format": 1,
+  "versions": [
+    {
+      "id": 1,
+      "label": "before lighting pass",
+      "created": 1762870000000,
+      "updated": 1762870100000,
+      "frozen": true,
+      "values": { "sun/power": 3, "Quality": { "v": "high", "l": "High" } },
+      "changes": [{ "p": "sun/power", "f": 1, "t": 3, "at": 1762870100000 }]
+    }
+  ]
+}`}
+  language="json"
+/>
+
+Reading stored data is lenient. Text that is not valid JSON starts a new history, and malformed
+versions, values and changes are dropped one by one. A history written by a newer version of the
+package, with a higher `format`, is left untouched: the session then runs without saving, so newer
+data is never overwritten.

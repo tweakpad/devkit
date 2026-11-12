@@ -1,0 +1,114 @@
+---
+title: Buttons
+description: A button that runs one action of your application from the pane.
+symbol: pane.addButton(params)
+api: [ButtonParams, ButtonApi]
+---
+
+<Preview
+  title="Buttons"
+  code={`<div id="buttons-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const scene = { speed: 0.6, radius: 180 };
+const pane = new Pane({ container: document.getElementById('buttons-hero'), title: 'Scene' });
+pane.addBinding(scene, 'speed', { min: 0, max: 4 });
+pane.addBinding(scene, 'radius', { min: 20, max: 400, step: 1 });
+pane.addButton({
+  title: 'Reset scene',
+  onClick: () => {
+    scene.speed = 0.6;
+    scene.radius = 180;
+  },
+});`}
+/>
+
+## Usage
+
+`addButton` adds an action to a pane, folder or tab page: a title and the function to run when the
+user clicks it or activates it from the keyboard. Buttons take the pane's appearance and density,
+and never submit a form the pane sits in. To put a button next to another control, compose them
+with `addRow`.
+
+<Code
+  code={`pane.addButton({
+  title: 'Reset scene',
+  onClick: () => {
+    params.speed = 0.6;
+  },
+});`}
+  language="ts"
+/>
+
+### Changing the title
+
+`title` can change after the button is added, for an action that toggles between two states. An
+active search applies again to the new title.
+
+<Preview
+  title="Changing the title"
+  code={`<div id="buttons-title"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const playback = { rate: 1, playing: true };
+const pane = new Pane({ container: document.getElementById('buttons-title'), title: 'Playback' });
+pane.addBinding(playback, 'rate', { min: 0.25, max: 2 });
+const toggle = pane.addButton({
+  title: 'Pause',
+  onClick: () => {
+    playback.playing = !playback.playing;
+    toggle.title = playback.playing ? 'Pause' : 'Play';
+  },
+});`}
+/>
+
+### Search name
+
+Search finds a button by its current title and by its `name`, a stable name that defaults to the
+first title. Set `name` when the title changes, so a search for the action keeps finding it.
+
+<Code
+  code={`const toggle = pane.addButton({
+  name: 'playback',
+  title: 'Pause',
+  onClick: () => togglePlayback(),
+});`}
+  language="ts"
+/>
+
+### Disabled and hidden
+
+A disabled button stays in place and in search results, but never runs its action. A hidden
+button disappears from the pane and from search. Both start from the parameters and change
+through the handle.
+
+<Preview
+  title="Disabled and hidden"
+  code={`<div id="buttons-disabled"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const level = { dirty: false };
+const pane = new Pane({ container: document.getElementById('buttons-disabled'), title: 'Level' });
+const save = pane.addButton({
+  title: 'Save level',
+  disabled: true,
+  onClick: () => {
+    level.dirty = false;
+    save.disabled = true;
+  },
+});
+pane.addButton({
+  title: 'Edit terrain',
+  onClick: () => {
+    level.dirty = true;
+    save.disabled = false;
+  },
+});`}
+/>
+
+A button runs its action only while the user can see and use it: hidden, filtered out by search,
+disabled and disposed buttons ignore clicks.
+
+### Disposing
+
+`dispose()` removes the button and releases its click listener. Disposing a folder, tab page or
+the pane disposes its buttons with it.
+
+<Code code={`toggle.dispose();`} language="ts" />

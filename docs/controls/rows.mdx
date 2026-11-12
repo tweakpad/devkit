@@ -1,0 +1,210 @@
+---
+title: Rows
+description: Several controls and buttons on one line, shown, disabled and found by search as a single control.
+symbol: pane.addRow(params)
+api: [InlineRowParams, InlineRowApi, InlineItem, InlineBindingItem, InlineButtonItem]
+---
+
+<Preview
+  title="Rows"
+  code={`<div id="rows-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const sim = { speed: 0.6 };
+const pane = new Pane({ container: document.getElementById('rows-hero'), title: 'Simulation' });
+pane.addRow({
+  name: 'speed-control',
+  items: [
+    { type: 'binding', target: sim, key: 'speed', label: 'Speed', min: 0, max: 4, step: 0.01 },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { sim.speed = 0.6; } },
+  ],
+});`}
+/>
+
+## Usage
+
+`addRow` puts several controls side by side, such as a slider with its Reset action. Panes,
+folders and tab pages all take rows. Each item is a declaration: a binding item takes `target`,
+`key` and the options of `addBinding`, and a button item takes the options of `addButton`. The row
+owns the layout, visibility, search, disabled state and disposal of its items, so there is no
+markup, styling or search registration to add.
+
+`items` on the returned row holds a handle per item, in declaration order: the same handles
+`addBinding` and `addButton` return, with their values, change listeners, refresh and disposal.
+
+<Code
+  code={`const speed = pane.addRow({
+  name: 'speed-control',
+  items: [
+    { type: 'binding', target: params, key: 'speed', label: 'Speed', min: 0, max: 4, step: 0.01 },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { params.speed = 0.6; } },
+  ],
+});
+speed.items[0].value = 1.2; // BindingApi<number>
+speed.items[1].title = 'Reset speed'; // ButtonApi`}
+  language="ts"
+/>
+
+A binding item is an ordinary binding: writes, change listeners, refresh scheduling and lazy
+mounting work exactly as for `addBinding`. With the pane's default frame refresh, items follow
+changes to the object on their own; with manual refresh, call the item handle's `refresh()`.
+
+### Buttons
+
+A row of buttons groups related actions, each one a handle you can retitle or disable later.
+
+<Preview
+  title="Buttons"
+  code={`<div id="rows-buttons"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const player = { paused: false };
+const pane = new Pane({ container: document.getElementById('rows-buttons'), title: 'Playback' });
+const playback = pane.addRow({
+  name: 'playback',
+  items: [
+    { type: 'button', title: 'Pause', onClick: () => { player.paused = true; } },
+    { type: 'button', title: 'Resume', onClick: () => { player.paused = false; } },
+  ],
+});
+playback.items[1].disabled = true;`}
+/>
+
+### Any control
+
+A row mixes sliders, number and text inputs, selects, checkboxes, switches, colors, monitors and
+buttons in any order. Each binding item picks its control from the value and options, or from
+`view`, exactly as `addBinding` does. Folders and tabs are containers and stay outside rows.
+
+<Preview
+  title="Any control"
+  code={`<div id="rows-mixed"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const grid = { visible: true, color: '#5b6b8c', cell: 32 };
+const pane = new Pane({ container: document.getElementById('rows-mixed'), title: 'Grid' });
+pane.addRow({
+  name: 'grid',
+  items: [
+    { type: 'binding', target: grid, key: 'visible', label: 'Show', view: 'switch' },
+    { type: 'binding', target: grid, key: 'color', label: 'Color' },
+    { type: 'binding', target: grid, key: 'cell', label: 'Cell', min: 4, max: 128, step: 4 },
+  ],
+});`}
+/>
+
+### Widths
+
+`width` sets an item's share of the remaining space as a positive number, and every item takes an
+equal share by default. `'auto'` sizes an item to its content instead, for auxiliary actions such
+as Reset next to a control that should keep the space.
+
+<Preview
+  title="Widths"
+  code={`<div id="rows-widths"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const brush = { size: 24, hardness: 0.8 };
+const pane = new Pane({ container: document.getElementById('rows-widths'), title: 'Brush' });
+pane.addRow({
+  name: 'brush',
+  items: [
+    { type: 'binding', target: brush, key: 'size', label: 'Size', min: 1, max: 200, width: 2 },
+    { type: 'binding', target: brush, key: 'hardness', label: 'Hardness', width: 1 },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { brush.size = 24; } },
+  ],
+});`}
+/>
+
+### Monitors
+
+A binding item with `view: 'monitor'` shows its value without an editor, next to the controls that
+act on it. `monitor: { view: 'graph' }` draws its recent history instead. It is still a binding
+item, with the same handle and lifecycle.
+
+<Preview
+  title="Monitors"
+  code={`<div id="rows-monitors"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const stats = { frameMs: 16.4 };
+setInterval(() => { stats.frameMs = 14 + Math.random() * 6; }, 250);
+const pane = new Pane({ container: document.getElementById('rows-monitors'), title: 'Frame' });
+pane.addRow({
+  name: 'frame-time',
+  items: [
+    { type: 'binding', target: stats, key: 'frameMs', label: 'Frame ms', view: 'monitor' },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { stats.frameMs = 0; } },
+  ],
+});`}
+/>
+
+### Disabled and hidden
+
+`disabled` on the row disables its editable items on top of their own flags, so re-enabling the row
+leaves individually disabled items disabled, including ones changed while the row was off. Monitors
+stay read-only either way. `hidden` hides the whole row the same way, without touching item flags,
+and its bindings stop sampling until it shows again. A row whose items are all hidden or disposed
+removes itself from the layout.
+
+<Preview
+  title="Disabled and hidden"
+  code={`<div id="rows-disabled"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const camera = { locked: false, orbit: 35 };
+const pane = new Pane({ container: document.getElementById('rows-disabled'), title: 'Camera' });
+const lock = pane.addBinding(camera, 'locked', { label: 'Lock camera' });
+const orbit = pane.addRow({
+  name: 'orbit',
+  items: [
+    { type: 'binding', target: camera, key: 'orbit', label: 'Orbit', min: 0, max: 360, step: 1 },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { camera.orbit = 35; } },
+  ],
+});
+lock.on('change', ({ value }) => { orbit.disabled = value; });`}
+/>
+
+### Search
+
+Search treats a row as one control. Its `name` and `label`, and the names and labels of its items,
+are its search terms, and a match on any of them keeps the whole row: searching for Speed or for
+Reset shows the slider together with its Reset action. A row's `label` is only a search term and
+adds nothing visible. Hidden and disposed items stop contributing terms, and live values never
+match. Declare separate rows when controls should be found on their own.
+
+<Preview
+  title="Search"
+  code={`<div id="rows-search"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const audio = { music: 0.7, effects: 0.9 };
+const pane = new Pane({ container: document.getElementById('rows-search'), title: 'Audio' });
+pane.addRow({
+  name: 'music',
+  label: 'Soundtrack',
+  items: [
+    { type: 'binding', target: audio, key: 'music', label: 'Music', min: 0, max: 1 },
+    { type: 'button', title: 'Mute', width: 'auto', onClick: () => { audio.music = 0; } },
+  ],
+});
+pane.addRow({
+  name: 'effects',
+  items: [
+    { type: 'binding', target: audio, key: 'effects', label: 'Effects', min: 0, max: 1 },
+    { type: 'button', title: 'Mute', width: 'auto', onClick: () => { audio.effects = 0; } },
+  ],
+});`}
+/>
+
+### Replacing and disposing
+
+A row's items are fixed when it is created. To change them, dispose the row and declare another.
+Disposing a row releases every item and its listeners, and disposing a folder, tab page or pane
+disposes its rows.
+
+An empty `items` list, a `width` that is not `'auto'` or a positive finite number, and a key missing
+from its target throw before the row is added. In TypeScript, each key is checked against its
+target, and `items` on the row keeps the handle type of each declaration.
+
+<Code
+  code={`speed.dispose();
+pane.addRow({
+  name: 'speed-control',
+  items: [{ type: 'binding', target: params, key: 'speed', label: 'Speed', min: 0, max: 8 }],
+});`}
+  language="ts"
+/>

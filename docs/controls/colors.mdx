@@ -1,0 +1,130 @@
+---
+title: Colors
+description: Color controls for CSS color strings and RGB objects, edited with the browser's picker or the library's popup picker.
+symbol: pane.addBinding(target, key, { color })
+api: [ColorBindingParams, ColorPickerMode, ColorObjectType, ColorFormat]
+---
+
+<Preview
+  title="Colors"
+  code={`<div id="colors-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const theme = { background: '#1d1b2c', accent: '#ff7a59' };
+const pane = new Pane({ container: document.getElementById('colors-hero'), title: 'Theme' });
+pane.addBinding(theme, 'background');
+pane.addBinding(theme, 'accent');`}
+/>
+
+## Usage
+
+A property that holds a CSS color string, or an object with numeric `r`, `g` and `b` channels,
+becomes a color control on its own: a label, the color as editable text, and a swatch that opens a
+picker. Edits write straight back into the property. The `color` option says how the value is
+stored and which picker opens; it works the same in `addBinding` on panes, folders and tab pages,
+and in binding items of `addRow`.
+
+<Code
+  code={`const material = { tint: '#ffb347', albedo: { r: 0.9, g: 0.42, b: 0.3 } };
+pane.addBinding(material, 'tint');
+pane.addBinding(material, 'albedo', { color: { type: 'float' } });`}
+  language="ts"
+/>
+
+### Notation
+
+`format` is the notation of a string binding: the text the user edits and the string written back
+to the property. Match it to how the application stores the color, so an `oklch()` design token
+stays in `oklch()` after an edit.
+
+<Preview
+  title="Notation"
+  code={`<div id="colors-notation"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const tokens = { brand: 'oklch(0.68 0.19 35)', surface: 'hsl(222 24% 14%)' };
+const pane = new Pane({ container: document.getElementById('colors-notation'), title: 'Tokens' });
+pane.addBinding(tokens, 'brand', { color: { format: 'oklch' } });
+pane.addBinding(tokens, 'surface', { color: { format: 'hsl' } });`}
+/>
+
+### Transparency
+
+`alpha: true` keeps the transparency of a string binding, for overlays, shadows and other
+translucent colors. Without it, the control edits an opaque color.
+
+<Preview
+  title="Transparency"
+  code={`<div id="colors-alpha"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const overlay = { scrim: 'rgb(12 14 22 / 0.6)' };
+const pane = new Pane({ container: document.getElementById('colors-alpha'), title: 'Overlay' });
+pane.addBinding(overlay, 'scrim', { color: { format: 'rgb', alpha: true } });`}
+/>
+
+### RGB objects
+
+An `{r, g, b}` object is edited as an opaque hex color and written back channel by channel into the
+same object, so a renderer holding that reference sees the change. Channels are 0–255 integers
+unless `type: 'float'` reads them as 0–1, the scale most 3D engines use. `format` and `alpha` apply
+to strings only: an object has no alpha channel.
+
+<Preview
+  title="RGB objects"
+  code={`<div id="colors-objects"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const fog = { color: { r: 0.62, g: 0.71, b: 0.84 } };
+const pane = new Pane({ container: document.getElementById('colors-objects'), title: 'Fog' });
+pane.addBinding(fog, 'color', { color: { type: 'float' } });`}
+/>
+
+### Popup picker
+
+`colorPicker: 'tweakpad'` on the pane swaps the browser's color dialog for the library's own picker,
+opened in a popup from the same inline label, text and swatch. The native dialog is whatever the
+browser and platform provide; the popup edits in the binding's notation, with transparency when
+`alpha` is on. The pane wires up the popup itself, with no events, styles or markup to add.
+
+<Preview
+  title="Popup picker"
+  code={`<div id="colors-popup"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const glow = { core: '#7cf5ff', halo: 'rgb(124 92 255 / 0.45)' };
+const pane = new Pane({
+  container: document.getElementById('colors-popup'),
+  title: 'Glow',
+  colorPicker: 'tweakpad',
+});
+pane.addBinding(glow, 'core');
+pane.addBinding(glow, 'halo', { color: { format: 'rgb', alpha: true } });`}
+/>
+
+Either picker is the same binding underneath: refresh, `change` and `finish` events, disabled
+state, search and disposal behave identically. Hiding or disabling a control closes its open
+popup, and disposing it removes the picker. The picker element is registered only when the first
+binding that uses it mounts.
+
+### Per binding
+
+`color.picker` overrides the pane's choice for one control, in either direction. The choice is
+made when the binding is created and stays fixed for its lifetime.
+
+<Preview
+  title="Per binding"
+  code={`<div id="colors-per-binding"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const orb = { body: '#3a7bd5', rim: '#f9d976' };
+const pane = new Pane({ container: document.getElementById('colors-per-binding'), title: 'Orb' });
+pane.addBinding(orb, 'body');
+pane.addBinding(orb, 'rim', { color: { picker: 'tweakpad' } });`}
+/>
+
+In a row, the binding item takes the same option:
+
+<Code
+  code={`pane.addRow({
+  items: [
+    { type: 'binding', target: params, key: 'accent', color: { picker: 'tweakpad' } },
+    { type: 'button', title: 'Reset', width: 'auto', onClick: () => { params.accent = '#38bdf8'; } },
+  ],
+});`}
+  language="ts"
+/>

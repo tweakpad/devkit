@@ -1,0 +1,129 @@
+---
+title: Pane
+description: A panel of live controls bound to your application's objects, floating over the page or placed in it.
+symbol: new Pane(options)
+api: [Pane, PaneOptions, PaneAnchor, FolderApi, FolderParams, TabsApi, TabPageApi, TabsParams, TabPageParams]
+---
+
+<Preview
+  title="Pane"
+  code={`<div id="pane-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const scene = { speed: 0.6, radius: 180, trails: true };
+const pane = new Pane({ container: document.getElementById('pane-hero'), title: 'Scene' });
+pane.addBinding(scene, 'speed', { min: 0, max: 4 });
+pane.addBinding(scene, 'radius', { min: 20, max: 400, step: 1 });
+pane.addBinding(scene, 'trails');`}
+/>
+
+## Usage
+
+A pane binds properties of your own objects to controls. It reads them every frame and shows what
+changed, and it writes them as soon as the user edits a control, so your application never syncs
+values by hand. Import the library's stylesheet once, then create a pane and add bindings, folders
+and tabs to it.
+
+<Code
+  code={`import '@tweakpad/ui/styles.css';
+import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ title: 'Scene' });
+pane.addBinding(params, 'speed', { min: 0, max: 4 });`}
+  language="ts"
+/>
+
+### Floating
+
+Without a `container`, a pane floats over the page in the corner `anchor` names, top right by
+default. It stays out of your layout, which suits a tool that sits over a canvas or a running
+scene. Drag its title bar to move it; `movable: false` pins it to its corner.
+
+<Code
+  code={`const pane = new Pane({ title: 'Lighting', anchor: 'bottom-left' });`}
+  language="ts"
+/>
+
+### In the page
+
+With a `container`, the pane flows inside that element instead of floating, at the pane's own
+width. Use it for a settings panel that belongs to a page section.
+
+<Preview
+  title="In the page"
+  code={`<div id="pane-in-page"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const camera = { fov: 50, near: 0.1 };
+const pane = new Pane({ container: document.getElementById('pane-in-page'), title: 'Camera' });
+pane.addBinding(camera, 'fov', { label: 'Field of view', min: 10, max: 120, step: 1 });
+pane.addBinding(camera, 'near', { label: 'Near plane', min: 0.01, max: 10 });`}
+/>
+
+### Folders
+
+`addFolder` groups related controls under a heading the user can collapse. Folders nest, and
+`expanded: false` starts one closed. A closed folder costs nothing: its bindings sleep until it
+opens.
+
+<Preview
+  title="Folders"
+  code={`<div id="pane-folders"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const light = { intensity: 1.2, shadows: true, bias: 0.002 };
+const pane = new Pane({ container: document.getElementById('pane-folders'), title: 'Lighting' });
+const sun = pane.addFolder({ title: 'Sun' });
+sun.addBinding(light, 'intensity', { min: 0, max: 4 });
+const shadows = sun.addFolder({ title: 'Shadows', expanded: false });
+shadows.addBinding(light, 'shadows');
+shadows.addBinding(light, 'bias', { min: 0, max: 0.01 });`}
+/>
+
+### Tabs
+
+`addTabs` splits controls into pages, one visible at a time. Each page takes bindings, folders and
+other tabs, and only the visible page is kept up to date.
+
+<Preview
+  title="Tabs"
+  code={`<div id="pane-tabs"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const params = { fov: 50, exposure: 1, bloom: true };
+const pane = new Pane({ container: document.getElementById('pane-tabs'), title: 'Render' });
+const tabs = pane.addTabs({ pages: [{ title: 'Camera' }, { title: 'Post' }] });
+tabs.pages[0].addBinding(params, 'fov', { min: 10, max: 120 });
+tabs.pages[1].addBinding(params, 'exposure', { min: 0, max: 4 });
+tabs.pages[1].addBinding(params, 'bloom');`}
+/>
+
+### Search
+
+The search icon in the title bar filters fields and monitors by property name or label, across
+every tab and folder. Pages stay available, folders without a match hide, and **Esc** clears the
+search. Selected tabs and open folders are left as they were.
+
+### Refresh
+
+By default a pane checks its bindings every frame. `refresh` sets a slower interval in
+milliseconds, or `'manual'` to read only when you call `pane.refresh()`, for objects that change
+rarely or in bursts.
+
+<Code
+  code={`const pane = new Pane({ title: 'Settings', refresh: 'manual' });
+loadSettings(settings);
+pane.refresh();`}
+  language="ts"
+/>
+
+### Collapsing and disposing
+
+The chevron in the title bar collapses the pane to its title; `expanded` reads and sets the same
+state from code. `dispose()` removes the pane and stops everything it was doing.
+
+<Code
+  code={`pane.expanded = false;
+pane.dispose();`}
+  language="ts"
+/>

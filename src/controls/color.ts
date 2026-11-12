@@ -1,6 +1,8 @@
 import type { ValueCodec } from '../core/binding.js';
 
+/** Channel scale of `{r, g, b}` color objects: `'int'` for 0–255, `'float'` for 0–1. */
 export type ColorObjectType = 'int' | 'float';
+/** Which picker a color control opens: the browser's own, or Tweakpad's color picker popup. */
 export type ColorPickerMode = 'native' | 'tweakpad';
 
 interface RgbObject {

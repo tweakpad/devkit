@@ -3,46 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>devkit playground</title>
+    <title>devkit tools</title>
     <style>
-      html,
       body {
         margin: 0;
-        block-size: 100%;
+        padding: 24px;
         background: var(--tp-background);
         color: var(--tp-foreground);
-        font-family: var(--tp-font-sans);
+        font: 14px/1.6 var(--tp-font-sans);
       }
 
-      canvas {
-        display: block;
-        inline-size: 100vw;
-        block-size: 100vh;
-      }
-
-      nav {
-        position: fixed;
-        inset-block-end: 12px;
-        inset-inline-start: 12px;
-        display: flex;
-        gap: 12px;
-        font-size: 13px;
-      }
-
-      nav a {
-        color: var(--tp-muted-foreground);
+      a {
+        color: inherit;
       }
     </style>
   </head>
   <body>
-    <canvas id="scene"></canvas>
-    <nav>
-      <a href="/">Playground</a>
-      <a href="/demo/vertical-tabs.html">Vertical tabs</a>
-      <a href="/demo/graphs.html">Graphs</a>
-      <a href="/demo/stress.html">Stress (1000 bindings)</a>
-      <a href="/demo/spike-library.html">Library cost spike</a>
-    </nav>
-    <script type="module" src="/demo/playground.ts"></script>
+    <h1>devkit tools</h1>
+    <p>
+      Showcases and documentation are in Storybook: <code>npm run storybook</code>. These pages are
+      the development tools.
+    </p>
+    <ul>
+      <li><a href="/demo/search-contract.html">Browser checks</a></li>
+      <li><a href="/demo/spike-library.html">Library cost spike</a></li>
+      <li>
+        <a href="/demo/library-proof.html">Library update cost proof</a> (run Vite with
+        <code>NODE_ENV=production</code>)
+      </li>
+    </ul>
+    <script type="module">
+      import '@tweakpad/ui/styles.css';
+    </script>
   </body>
 </html>

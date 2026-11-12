@@ -23,48 +23,99 @@ import {
 import type { ControlDescriptor } from '../history/types.js';
 import type { PaneContext } from './context.js';
 
+/**
+ * The control a binding uses. `'monitor'` displays the value without an editor; the others edit
+ * it.
+ */
 export type ControlKind =
   'slider' | 'number' | 'text' | 'checkbox' | 'switch' | 'select' | 'color' | 'monitor';
 
+/**
+ * The choices of a select: a record of labels to values, a list of values labeled with their
+ * text, or a list of `{ label, value }`.
+ */
 export type OptionList =
   | Record<string, unknown>
   | readonly (string | number | boolean)[]
   | readonly { label: string; value: unknown }[];
 
+/** Color options of a binding, its `color` option. */
 export interface ColorBindingParams {
+  /**
+   * Channel scale of `{r, g, b}` object values: 0–255 integers or 0–1 floats.
+   * @default 'int'
+   */
   type?: ColorObjectType;
+  /**
+   * Notation of CSS color string values, both shown and written. Object values always use hex.
+   * @default 'hex'
+   */
   format?: ColorFormat;
+  /**
+   * Whether CSS color string values keep transparency. Object values have no alpha channel.
+   * @default false
+   */
   alpha?: boolean;
-  /** Overrides the pane's picker choice for this binding. */
+  /** Overrides the pane's `colorPicker` for this binding. */
   picker?: ColorPickerMode;
 }
 
+/** Options of `addBinding()`, and of binding items in `addRow()`. */
 export interface BindingParams {
-  /** Row label; defaults to the property key. */
+  /** Row label, also matched by search. Defaults to the property key. */
   label?: string;
   /** Control to use; inferred from the value and the other options when omitted. */
   view?: ControlKind;
+  /**
+   * Lowest value of a number. With `max`, a number gets a slider; a monitor graph uses it as its
+   * fixed lower bound.
+   */
   min?: number;
+  /**
+   * Highest value of a number. With `min`, a number gets a slider; a monitor graph uses it as its
+   * fixed upper bound.
+   */
   max?: number;
+  /**
+   * Increment of a number control. Omitted, sliders take a round step for their range and number
+   * inputs step by 1.
+   */
   step?: number;
-  /** Decimals shown and compared; defaults to the decimals of `step`. */
+  /**
+   * Decimals shown, and the resolution below which number changes are ignored. Defaults to the
+   * decimals of `step`, or 2 for monitors.
+   */
   precision?: number;
   /** Turns any value into a pick from these options. */
   options?: OptionList;
-  /** Color handling: object channel range, string notation, alpha. */
+  /** Color options: the picker, the channel scale of `{r, g, b}` objects, notation and alpha. */
   color?: ColorBindingParams;
-  /** Presentation options when view is 'monitor'; other binding options stay the same. */
+  /** How a `view: 'monitor'` binding is shown: as text or as a graph of its history. */
   monitor?: MonitorOptions;
-  /** Sampling interval in ms for this binding; 0 every frame, -1 only on refresh(). */
+  /**
+   * Milliseconds between samples of this binding, in place of the pane's `refresh`: 0 samples
+   * every frame, -1 only on `refresh()`.
+   */
   interval?: number;
+  /**
+   * Starts the control disabled: shown dimmed and ignoring input.
+   * @default false
+   */
   disabled?: boolean;
+  /**
+   * Starts the control hidden, which also leaves it out of search.
+   * @default false
+   */
   hidden?: boolean;
   /**
    * Stable name in the pane's history, in place of the property key. Keeps stored values when
    * the key or label changes, and tells apart bindings of the same key in one container.
    */
   id?: string;
-  /** Set false to leave this binding out of the pane's history. Default true. */
+  /**
+   * Whether the pane's history records this binding. Monitors are never recorded.
+   * @default true
+   */
   history?: boolean;
 }
 

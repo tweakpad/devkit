@@ -21,17 +21,24 @@ const fail = (message) => {
 };
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
-// 1. The tarball holds the build, the readme, the license and the manifest, and nothing else.
+// 1. The tarball holds the build, the documentation pages, the readme, the license and the
+// manifest, and nothing else.
 const [pack] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', work]));
 const files = new Set(pack.files.map((file) => file.path));
 const unexpected = [...files].filter(
-  (path) => !/^dist\//u.test(path) && !['package.json', 'README.md', 'LICENSE'].includes(path),
+  (path) =>
+    !/^dist\//u.test(path) &&
+    !/^docs\/[^/]+\/[^/]+\.mdx$/u.test(path) &&
+    !['package.json', 'README.md', 'LICENSE'].includes(path),
 );
 if (unexpected.length) fail(`unexpected files: ${unexpected.slice(0, 10).join(', ')}`);
 const tests = [...files].filter((path) => /\.test\.(js|d\.ts)$/u.test(path));
 if (tests.length) fail(`test files are packed: ${tests.slice(0, 5).join(', ')}`);
-for (const required of ['LICENSE', 'README.md'])
+for (const required of ['LICENSE', 'README.md', 'dist/docs.json'])
   if (!files.has(required)) fail(`${required} is not packed`);
+// The documentation pages the website reads, as @tweakpad/ui ships its own.
+const pages = JSON.parse(readFileSync(join(root, 'dist/docs.json'), 'utf8')).pages;
+for (const page of pages) if (!files.has(page.file)) fail(`${page.file} is not packed`);
 for (const [subpath, target] of Object.entries(manifest.exports)) {
   for (const path of typeof target === 'string' ? [target] : Object.values(target))
     if (!files.has(path.replace(/^\.\//u, ''))) fail(`export ${subpath} -> ${path} is not packed`);

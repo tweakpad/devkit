@@ -1,0 +1,76 @@
+/* A use case adds no spacing of its own (a figure's default margins indent it); the canvas has its own. */
+.devkit-docs-example {
+  margin: 0;
+}
+
+.devkit-docs-example > figcaption {
+  margin-block-end: var(--tp-space-2);
+  font-weight: var(--tp-font-medium);
+}
+
+/*
+ * A canvas on a Docs page (the Default story and every use case) is the library's page surface, in
+ * either scheme: Storybook's own canvas color would frame the previews in a second gray.
+ */
+.sbdocs .docs-story {
+  background: var(--tp-background);
+}
+
+/* A preview: the panes its script builds, aligned as the example asks. */
+.devkit-docs-preview {
+  background: var(--tp-background);
+  color: var(--tp-foreground);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--tp-space-4);
+}
+
+.devkit-docs-preview[data-align='center'] {
+  justify-content: center;
+}
+
+.devkit-docs-preview[data-align='stretch'] > * {
+  flex: 1 1 100%;
+}
+
+/* The page's entry point under its description, as Storybook styles inline code. */
+.devkit-docs-symbol {
+  margin-block: 0 var(--tp-space-6);
+}
+
+/* A showcase fills the canvas; its panes float over it. */
+.devkit-showcase {
+  position: relative;
+  inline-size: 100vw;
+  block-size: 100vh;
+  overflow: hidden;
+}
+
+/*
+ * Docs pages on a phone. The library's body minimum (400px) would make a 390px page scroll
+ * sideways, so a Docs page fills whatever width it gets. Args tables and Markdown tables keep their
+ * columns and scroll inside their own box.
+ */
+body:has(.sbdocs-wrapper) {
+  min-width: 0;
+}
+
+.sbdocs .docblock-argstable,
+.sbdocs-content > table {
+  display: block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+/* A long type definition in an API row wraps inside its column instead of widening the table. */
+.sbdocs .docblock-argstable td code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (width <= 600px) {
+  .sbdocs.sbdocs-wrapper {
+    padding-inline: var(--tp-space-4);
+  }
+}

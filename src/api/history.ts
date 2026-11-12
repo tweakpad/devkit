@@ -71,6 +71,7 @@ export class HistoryApi {
     return this.#history.key;
   }
 
+  /** When versions are made, as the `mode` option set it. */
   get mode(): HistoryMode {
     return this.#history.mode;
   }
@@ -94,6 +95,7 @@ export class HistoryApi {
     return this.#history.current;
   }
 
+  /** One version by id, or undefined when there is none. */
   version(id: number): HistoryVersion | undefined {
     return this.#history.version(id);
   }
@@ -108,6 +110,7 @@ export class HistoryApi {
     this.#history.restore(id);
   }
 
+  /** Sets a version's label. Throws for an unknown id. */
   rename(id: number, label: string): void {
     this.#history.rename(id, label);
   }
@@ -147,7 +150,13 @@ export class HistoryApi {
     this.#history.save();
   }
 
-  /** `change`: one finished edit or restored value. `version`: the version list changed. */
+  /**
+   * Listens for history changes. Returns a function that removes the listener.
+   * @event change - Fires with the `HistoryChange` for each finished edit recorded and each value
+   * `restore()` applies.
+   * @event version - Fires when versions change other than by an edit: after `advance()`,
+   * `restore()`, `rename()`, `delete()`, `import()`, `prune()` or `clear()` changed something.
+   */
   on(type: 'change', listener: (change: HistoryChange) => void): () => void;
   on(type: 'version', listener: () => void): () => void;
   on(type: 'change' | 'version', listener: (change: HistoryChange) => void): () => void {

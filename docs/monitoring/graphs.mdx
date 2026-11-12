@@ -1,0 +1,350 @@
+---
+title: Graphs
+description: A live plot of numeric series, sampled by the pane or pushed by your application.
+symbol: pane.addGraph(params)
+api: [GraphParams, GraphApi, GraphSeries, GraphGuide, GraphMarker, GraphLayout, GraphHeaderContext, GraphSeriesSnapshot]
+---
+
+<Preview
+  title="Graphs"
+  code={`<div id="graphs-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let phase = 0;
+const pane = new Pane({ container: document.getElementById('graphs-hero'), title: 'Signals' });
+pane.addGraph({
+  label: 'Wave',
+  series: [{ id: 'sine', label: 'Sine', min: -1, max: 1, read: () => Math.sin((phase += 0.08)) }],
+});`}
+/>
+
+## Usage
+
+`addGraph` adds a live graph of one or more numeric series to a pane, folder or tab page. It is not
+tied to performance: anything that produces numbers over time can feed it, from a physics step to
+a network socket. The performance monitor is built on it, and so is the graph view of a monitor
+binding.
+
+<Code
+  code={`const latency = pane.addGraph({
+  label: 'Latency',
+  series: [{ id: 'p95', label: 'p95', unit: 'ms', read: () => stats.p95 }],
+});`}
+  language="ts"
+/>
+
+### Sampled series
+
+A series with `read()` is polled on the pane's frame loop every `interval` milliseconds, and only
+while the graph is visible: a graph that is hidden, collapsed or scrolled away costs nothing. Set
+`sampleWhileHidden` when the history must stay complete, such as for a value you check after the
+fact.
+
+<Preview
+  title="Sampled series"
+  code={`<div id="graphs-sampled"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let depth = 12;
+const pane = new Pane({ container: document.getElementById('graphs-sampled'), title: 'Jobs' });
+pane.addGraph({
+  label: 'Queue',
+  interval: 250,
+  series: [
+    {
+      id: 'depth',
+      label: 'Queue depth',
+      unit: 'jobs',
+      precision: 0,
+      read: () => (depth = Math.max(0, depth + Math.round((Math.random() - 0.5) * 6))),
+    },
+  ],
+});`}
+/>
+
+### Pushed values
+
+When values arrive on their own schedule, leave out `read()` and call `push()` with the values by
+series id. On a graph without sampled series, every call records one frame, and a series left out
+of the call gets a gap. On a sampled graph, pushed values are held and recorded with every
+following sample until they are pushed again, which suits values that arrive asynchronously.
+
+<Preview
+  title="Pushed values"
+  code={`<div id="graphs-pushed"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('graphs-pushed'), title: 'Network' });
+const traffic = pane.addGraph({
+  label: 'Traffic',
+  series: [{ id: 'requests', label: 'Requests', unit: 'req/s', precision: 0 }],
+});
+setInterval(() => traffic.push({ requests: 40 + Math.random() * 30 }), 200);`}
+/>
+
+### Pages
+
+By default a graph shows one series at a time. Click the graph, or press **Enter** or **Space** on
+it, to show the next page. All pages share one history, so switching pages never loses data. The
+handle's `page` reads or sets the page, `pageCount` counts them and `on('page', listener)` reports
+changes. A disabled graph keeps recording but cannot change pages.
+
+<Preview
+  title="Pages"
+  code={`<div id="graphs-pages"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pool = { busy: 4, queued: 20 };
+const pane = new Pane({ container: document.getElementById('graphs-pages'), title: 'Workers' });
+pane.addGraph({
+  label: 'Pool',
+  series: [
+    { id: 'busy', label: 'Busy', unit: 'workers', precision: 0, read: () => pool.busy },
+    { id: 'queued', label: 'Queued', unit: 'tasks', precision: 0, read: () => pool.queued },
+  ],
+});
+setInterval(() => {
+  pool.busy = 2 + Math.round(Math.random() * 6);
+  pool.queued = Math.max(0, pool.queued + Math.round((Math.random() - 0.5) * 8));
+}, 150);`}
+/>
+
+### Overlay
+
+`layout: 'overlay'` draws every series on one plot, each in its own color. The readout shows each
+value in its line's color with its unit attached, such as `16.7ms`. Each series is drawn against its
+own range, so series in different units, such as frames per second, milliseconds and megabytes,
+overlay meaningfully.
+
+<Preview
+  title="Overlay"
+  code={`<div id="graphs-overlay"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let phase = 0;
+const pane = new Pane({ container: document.getElementById('graphs-overlay'), title: 'Signals' });
+pane.addGraph({
+  label: 'Oscillators',
+  layout: 'overlay',
+  interval: 33,
+  series: [
+    { id: 'sine', label: 'Sine', min: -1, max: 1, read: () => Math.sin((phase += 0.08)) },
+    {
+      id: 'square',
+      label: 'Square',
+      min: -1,
+      max: 1,
+      read: () => (Math.sin(phase * 0.25) > 0 ? 0.6 : -0.6),
+    },
+  ],
+});`}
+/>
+
+### Grouped pages
+
+`pages` lists explicit groups of series ids and overrides `layout`: each page overlays its series,
+and clicking shows the next page. Series that no page lists get pages of their own.
+
+<Preview
+  title="Grouped pages"
+  code={`<div id="graphs-grouped"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const frame = { fps: 60, ms: 16.7, calls: 120 };
+const pane = new Pane({ container: document.getElementById('graphs-grouped'), title: 'Renderer' });
+pane.addGraph({
+  label: 'Frame',
+  pages: [['fps', 'ms']],
+  series: [
+    { id: 'fps', label: 'FPS', unit: 'FPS', precision: 0, read: () => frame.fps },
+    { id: 'ms', label: 'Frame time', unit: 'ms', precision: 1, read: () => frame.ms },
+    { id: 'calls', label: 'Draw calls', unit: 'calls', precision: 0, read: () => frame.calls },
+  ],
+});
+setInterval(() => {
+  frame.ms = 15 + Math.random() * 4;
+  frame.fps = 1000 / frame.ms;
+  frame.calls = 118 + Math.round(Math.random() * 6);
+}, 100);`}
+/>
+
+### Ranges
+
+`min` and `max` fix a series' bounds. Omitted bounds fit the visible data with headroom, on round
+steps, and refit only when the data leaves the range or uses less than a third of it. With the
+default absolute scale the range includes zero, so lines show true magnitude while the far bound
+still fits the data. `scale: 'relative'` makes both bounds hug the visible data, so small
+variations fill the height, for values where the change matters more than the size.
+
+<Preview
+  title="Ranges"
+  code={`<div id="graphs-ranges"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let temperature = 71.5;
+const read = () => (temperature += (Math.random() - 0.5) * 0.3);
+const pane = new Pane({ container: document.getElementById('graphs-ranges'), title: 'GPU' });
+pane.addGraph({
+  label: 'Absolute',
+  series: [{ id: 'temp', label: 'Temperature', unit: '°C', precision: 1, read }],
+});
+pane.addGraph({
+  label: 'Relative',
+  series: [
+    { id: 'temp', label: 'Temperature', unit: '°C', precision: 1, scale: 'relative', read },
+  ],
+});`}
+/>
+
+### Colors and fill
+
+Series take the chart colors in order unless `color` names any CSS color. The area under a line is
+filled by default; `fill` sets its opacity or turns it off. Series on one plot share one fill
+opacity, so overlapping fills stay as light as a single one.
+
+<Preview
+  title="Colors and fill"
+  code={`<div id="graphs-colors"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let t = 0;
+const pane = new Pane({ container: document.getElementById('graphs-colors'), title: 'Audio' });
+pane.addGraph({
+  label: 'Levels',
+  layout: 'overlay',
+  series: [
+    {
+      id: 'left',
+      label: 'Left',
+      color: '#22d3ee',
+      fill: 0.3,
+      min: 0,
+      max: 1,
+      read: () => 0.5 + 0.4 * Math.sin((t += 0.1)),
+    },
+    {
+      id: 'right',
+      label: 'Right',
+      color: '#f472b6',
+      fill: false,
+      min: 0,
+      max: 1,
+      read: () => 0.5 + 0.4 * Math.sin(t * 1.3),
+    },
+  ],
+});`}
+/>
+
+### Guides
+
+`guides` draws dashed horizontal lines in front of the data. A guide's `value` is a number in the
+series' own units, such as a latency target, or `'average'` for the mean of the visible history,
+drawn in the series' color. An average guide moves only once it has drifted by about a pixel, and
+guides outside a series' range are hidden.
+
+<Preview
+  title="Guides"
+  code={`<div id="graphs-guides"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('graphs-guides'), title: 'API' });
+const latency = pane.addGraph({
+  label: 'Latency',
+  series: [
+    {
+      id: 'p95',
+      label: 'p95',
+      unit: 'ms',
+      precision: 0,
+      guides: [{ value: 100, label: 'SLO' }, { value: 'average' }],
+    },
+  ],
+});
+setInterval(() => latency.push({ p95: 60 + Math.random() * 60 }), 200);`}
+/>
+
+### Readouts
+
+The header shows each series' latest value with `precision` decimals and its unit. A series'
+`format` writes its own text from a snapshot of the series, whose `overlaid` flag tells it to keep
+the text short when it shares a plot. A graph's `format` replaces the readout of every page with
+one text. Readouts refresh at most every `headerInterval` milliseconds, and the last value of a
+burst is always shown.
+
+<Preview
+  title="Readouts"
+  code={`<div id="graphs-readouts"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+let triangles = 1240000;
+const pane = new Pane({ container: document.getElementById('graphs-readouts'), title: 'Scene' });
+pane.addGraph({
+  label: 'Geometry',
+  series: [
+    {
+      id: 'triangles',
+      label: 'Triangles',
+      read: () => (triangles += Math.round((Math.random() - 0.5) * 20000)),
+      format: (s) => (s.value === null ? '—' : (s.value / 1e6).toFixed(2) + 'M triangles'),
+    },
+  ],
+});`}
+/>
+
+### Markers
+
+Markers put short text at the end of the header, such as a region or a rendering backend. A
+marker has fixed `text`, or a `read()` polled with the readout that hides the marker when it
+returns nothing. `setMarker(id, text)` changes or adds one later, with an optional tooltip, and
+`null` removes it.
+
+<Preview
+  title="Markers"
+  code={`<div id="graphs-markers"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const link = { online: true };
+const pane = new Pane({ container: document.getElementById('graphs-markers'), title: 'Network' });
+const traffic = pane.addGraph({
+  label: 'Traffic',
+  series: [{ id: 'requests', label: 'Requests', unit: 'req/s', precision: 0 }],
+  markers: [
+    { id: 'region', text: 'eu-west', title: 'Serving region' },
+    { id: 'status', read: () => (link.online ? '' : 'Offline') },
+  ],
+});
+setInterval(() => {
+  link.online = Math.random() > 0.1;
+  traffic.push({ requests: link.online ? 40 + Math.random() * 30 : 0 });
+}, 400);`}
+/>
+
+### Changing series
+
+A graph's series can change while it runs. `addSeries` and `removeSeries` add and drop lines,
+`setRange` fixes or releases a series' bounds, and `clear` empties the history. Each of these
+redraws the graph once.
+
+<Code
+  code={`graph.addSeries({ id: 'gpu', label: 'GPU', unit: 'ms', read: () => timings.gpu });
+graph.setRange('gpu', { min: 0, max: 33.4 });
+graph.removeSeries('cpu');
+graph.clear();`}
+  language="ts"
+/>
+
+### Cost
+
+Graphs are drawn by the library's plot in its push mode and stay on its incremental path: each
+paint shifts the cached pixels and draws only the new columns.
+
+- Each graph keeps one bounded history. Values are normalized to their series' range as they
+  arrive, so series in different units share one plot without redrawing.
+- Ordinary samples never redraw the whole history. A refit renormalizes it once, and so do
+  paging, adding series and `setRange`. Guides sit outside the cached history, so moving one
+  repaints only the guides, at most at the readout rate.
+- Every graph of a pane paints through one shared scheduler, with a small budget per frame and a
+  rate capped by the graph's sample rate.
+- Readouts write text only when it changed, and sampling allocates nothing per frame.
+- Graphs mount lazily and unmount with the pane's other rows. Their history lives outside the
+  element, so a remounted graph redraws what it had.

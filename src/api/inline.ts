@@ -6,17 +6,31 @@ import type { SearchMetadata } from '../core/search.js';
 import { SearchableRow } from './rows.js';
 
 interface InlineSize {
-  /** Relative share of remaining space (default 1), or intrinsic width for an auxiliary action. */
+  /**
+   * Share of the row's free space, relative to the other items, or `'auto'` for the item's own
+   * width, e.g. for a Reset button.
+   * @default 1
+   */
   width?: number | 'auto';
 }
 
+/** A binding in an inline row: a target, a key, and any `BindingParams`. */
 export type InlineBindingItem = BindingParams &
   InlineSize & {
+    /** The item's kind: a binding of `target[key]`, or a button. */
     type: 'binding';
+    /** The object whose property the item binds. */
     target: object;
+    /** The property of `target` the item binds; it must exist on `target`. */
     key: PropertyKey;
   };
-export type InlineButtonItem = ButtonParams & InlineSize & { type: 'button' };
+/** A button in an inline row: any `ButtonParams`. */
+export type InlineButtonItem = ButtonParams &
+  InlineSize & {
+    /** The item's kind: a binding of `target[key]`, or a button. */
+    type: 'button';
+  };
+/** One item of an inline row, a binding or a button as its `type` says. */
 export type InlineItem = InlineBindingItem | InlineButtonItem;
 export type InlineItemApi<T extends InlineItem> = T extends { type: 'button' }
   ? ButtonApi
@@ -34,11 +48,23 @@ export type ValidatedInlineItems<T extends readonly InlineItem[]> = {
     : T[I];
 };
 
+/** Options of `addRow()`. */
 export interface InlineRowParams<T extends readonly InlineItem[] = readonly InlineItem[]> {
+  /** The items, in display order; at least one. The list is fixed once the row exists. */
   items: T;
+  /** Stable searchable name of the whole row. */
   name?: string;
+  /** Additional search label of the whole row; it adds nothing visible. */
   label?: string;
+  /**
+   * Starts the row hidden, leaving the items' own `hidden` flags as they are.
+   * @default false
+   */
   hidden?: boolean;
+  /**
+   * Starts the row disabled, leaving the items' own `disabled` flags as they are.
+   * @default false
+   */
   disabled?: boolean;
 }
 
@@ -95,12 +121,18 @@ export class InlineRow extends SearchableRow {
   }
 }
 
+/** The handle `addRow` returns. */
 export class InlineRowApi<T extends readonly InlineItem[] = readonly InlineItem[]> {
   constructor(
     private readonly row: InlineRow,
+    /** Handles of the items in order: a `BindingApi` per binding, a `ButtonApi` per button. */
     readonly items: InlineApis<T>,
     private readonly context: PaneContext,
   ) {}
+  /**
+   * Whether the whole row is hidden, which leaves it out of search. A row whose items are all
+   * hidden or disposed reads as hidden too.
+   */
   get hidden(): boolean {
     return this.row.hidden;
   }
@@ -108,15 +140,21 @@ export class InlineRowApi<T extends readonly InlineItem[] = readonly InlineItem[
     this.row.setHidden(hidden);
     this.context.refreshSearch?.();
   }
+  /**
+   * Whether the whole row is disabled. It combines with each item's own `disabled`, which it
+   * never overwrites.
+   */
   get disabled(): boolean {
     return this.row.disabled;
   }
   set disabled(disabled: boolean) {
     this.row.setDisabled(disabled);
   }
+  /** The stable visibility shell containing the complete row. */
   get element(): HTMLElement {
     return this.row.element;
   }
+  /** Removes the row and every item in it. */
   dispose(): void {
     this.row.dispose();
     this.context.refreshSearch?.();

@@ -98,10 +98,15 @@ export class GraphApi {
     return this.row.element;
   }
 
+  /** The graph's `label`. */
   get label(): string {
     return this.row.metadata.name;
   }
 
+  /**
+   * Whether the graph is hidden, which also leaves it out of search. A hidden graph stops
+   * sampling unless `sampleWhileHidden` is set.
+   */
   get hidden(): boolean {
     return this.row.hidden;
   }
@@ -111,11 +116,11 @@ export class GraphApi {
     this.context.refreshSearch?.();
   }
 
+  /** Whether the graph is disabled: dimmed, still recording, and not changing pages. */
   get disabled(): boolean {
     return this.row.disabled;
   }
 
-  /** Disabled graphs keep recording but are dimmed and cannot change pages. */
   set disabled(disabled: boolean) {
     this.row.setDisabled(disabled);
   }
@@ -129,6 +134,7 @@ export class GraphApi {
     this.row.model.page = page;
   }
 
+  /** Number of pages. */
   get pageCount(): number {
     return this.row.model.pages.length;
   }
@@ -154,10 +160,15 @@ export class GraphApi {
     this.row.model.setRange(id, range);
   }
 
+  /**
+   * Adds a series, with gaps for the frames recorded before it. Throws for an id the graph
+   * already has.
+   */
   addSeries(series: GraphSeries): void {
     this.row.model.addSeries(series);
   }
 
+  /** Removes a series by id. Throws when it is the graph's last series. */
   removeSeries(id: string): void {
     this.row.model.removeSeries(id);
   }
@@ -167,11 +178,17 @@ export class GraphApi {
     this.row.model.clear();
   }
 
+  /**
+   * Listens for page changes. Returns a function that removes the listener.
+   * @event page - Fires with the new page index when the page changes, by a click or by setting
+   * `page`.
+   */
   on(type: 'page', listener: (page: number) => void): () => void {
     void type;
     return this.row.model.onPage(listener);
   }
 
+  /** Removes the graph and stops sampling it. */
   dispose(): void {
     this.row.dispose();
     this.context.refreshSearch?.();

@@ -1,0 +1,171 @@
+---
+title: Vertical tabs
+description: A column of icon tabs along one edge of the pane, for top-level groups of controls.
+symbol: pane.addTabs({ orientation: 'vertical', pages })
+api: [TabsParams, TabPageParams]
+---
+
+<Preview
+  title="Vertical tabs"
+  code={`<div id="vertical-tabs-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { sunIcon } from '@tweakpad/ui/icons/sun';
+import { monitorIcon } from '@tweakpad/ui/icons/monitor';
+import { settingsIcon } from '@tweakpad/ui/icons/settings';
+const scene = {
+  intensity: 1.2,
+  shadows: true,
+  exposure: 1,
+  bloom: true,
+  quality: 'high',
+  vsync: true,
+};
+const pane = new Pane({ container: document.getElementById('vertical-tabs-hero'), title: 'Scene' });
+const tabs = pane.addTabs({
+  orientation: 'vertical',
+  pages: [
+    { title: 'Lighting', icon: sunIcon },
+    { title: 'Display', icon: monitorIcon },
+    { title: 'Settings', icon: settingsIcon },
+  ],
+});
+tabs.pages[0].addBinding(scene, 'intensity', { min: 0, max: 4 });
+tabs.pages[0].addBinding(scene, 'shadows');
+tabs.pages[1].addBinding(scene, 'exposure', { min: 0, max: 4 });
+tabs.pages[1].addBinding(scene, 'bloom');
+tabs.pages[2].addBinding(scene, 'quality', { options: ['low', 'medium', 'high'] });
+tabs.pages[2].addBinding(scene, 'vsync', { label: 'V-sync' });`}
+/>
+
+## Usage
+
+Vertical tabs place an icon column along one edge of the group, inside the pane, and show one page
+at a time next to it. They suit the top-level areas of a tool, such as lighting, display and
+settings, where a row of text tabs would run out of room. Each page needs a title and a library
+icon. The selected icon joins a shared content surface headed by the page's title.
+
+<Code
+  code={`import { sunIcon } from '@tweakpad/ui/icons/sun';
+const tabs = pane.addTabs({
+  orientation: 'vertical',
+  pages: [{ title: 'Lighting', icon: sunIcon }],
+});
+tabs.pages[0].addBinding(settings, 'enabled');
+tabs.selected = 0;`}
+  language="ts"
+/>
+
+### Icon colors and hints
+
+`color` tints a page's icon artwork and nothing else, so a group stays readable while its icons
+are easy to tell apart. Hovering or focusing an icon opens a hint toward the inside of the pane; it
+shows the page title unless `hint` gives a longer description.
+
+<Preview
+  title="Icon colors and hints"
+  code={`<div id="vertical-tabs-colors"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { sunIcon } from '@tweakpad/ui/icons/sun';
+import { moonIcon } from '@tweakpad/ui/icons/moon';
+const sky = { sunElevation: 42, sunHeat: 0.8, moonPhase: 0.5, starDensity: 0.3 };
+const pane = new Pane({ container: document.getElementById('vertical-tabs-colors'), title: 'Sky' });
+const tabs = pane.addTabs({
+  orientation: 'vertical',
+  pages: [
+    { title: 'Day', icon: sunIcon, color: '#fbbf24', hint: 'Daylight and sun position' },
+    { title: 'Night', icon: moonIcon, color: '#a5b4fc', hint: 'Moon and stars' },
+  ],
+});
+tabs.pages[0].addBinding(sky, 'sunElevation', { label: 'Elevation', min: 0, max: 90, step: 1 });
+tabs.pages[0].addBinding(sky, 'sunHeat', { label: 'Warmth', min: 0, max: 1 });
+tabs.pages[1].addBinding(sky, 'moonPhase', { label: 'Phase', min: 0, max: 1 });
+tabs.pages[1].addBinding(sky, 'starDensity', { label: 'Stars', min: 0, max: 1 });`}
+/>
+
+### Side
+
+By default the icons sit on the edge away from the screen corner: on the left of a pane anchored
+to the right, and on the right of a pane anchored to the left. A pane in the page puts them on the
+left unless it has a left `anchor`. `side` places them on one edge explicitly.
+
+<Preview
+  title="Side"
+  code={`<div id="vertical-tabs-side"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { zapIcon } from '@tweakpad/ui/icons/zap';
+import { wandSparklesIcon } from '@tweakpad/ui/icons/wand-sparkles';
+const fx = { glow: 0.4, threshold: 0.8, grain: 0.15, vignette: true };
+const pane = new Pane({
+  container: document.getElementById('vertical-tabs-side'),
+  title: 'Effects',
+});
+const tabs = pane.addTabs({
+  orientation: 'vertical',
+  side: 'right',
+  pages: [
+    { title: 'Glow', icon: zapIcon },
+    { title: 'Film', icon: wandSparklesIcon },
+  ],
+});
+tabs.pages[0].addBinding(fx, 'glow', { min: 0, max: 1 });
+tabs.pages[0].addBinding(fx, 'threshold', { min: 0, max: 1 });
+tabs.pages[1].addBinding(fx, 'grain', { min: 0, max: 1 });
+tabs.pages[1].addBinding(fx, 'vignette');`}
+/>
+
+### Stacked groups
+
+Vertical groups go directly on the pane, and several of them stack, each with its own icon
+column, alongside shared controls and monitors. Their pages take folders and horizontal tabs like
+any page. Folders and tab pages cannot hold a vertical group: adding one there throws.
+
+<Preview
+  title="Stacked groups"
+  code={`<div id="vertical-tabs-stacked"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { sunIcon } from '@tweakpad/ui/icons/sun';
+import { eyeIcon } from '@tweakpad/ui/icons/eye';
+import { imageIcon } from '@tweakpad/ui/icons/image';
+import { settingsIcon } from '@tweakpad/ui/icons/settings';
+const render = {
+  intensity: 1.2,
+  ambient: 0.3,
+  fov: 50,
+  near: 0.1,
+  paused: false,
+  format: 'png',
+  scale: 2,
+};
+const pane = new Pane({
+  container: document.getElementById('vertical-tabs-stacked'),
+  title: 'Render',
+});
+const scene = pane.addTabs({
+  orientation: 'vertical',
+  pages: [
+    { title: 'Lighting', icon: sunIcon },
+    { title: 'Camera', icon: eyeIcon },
+  ],
+});
+const light = scene.pages[0].addTabs({ pages: [{ title: 'Sun' }, { title: 'Ambient' }] });
+light.pages[0].addBinding(render, 'intensity', { min: 0, max: 4 });
+light.pages[1].addBinding(render, 'ambient', { min: 0, max: 1 });
+scene.pages[1].addBinding(render, 'fov', { label: 'Field of view', min: 10, max: 120, step: 1 });
+scene.pages[1].addBinding(render, 'near', { label: 'Near plane', min: 0.01, max: 10 });
+pane.addBinding(render, 'paused');
+const output = pane.addTabs({
+  orientation: 'vertical',
+  pages: [
+    { title: 'Export', icon: imageIcon },
+    { title: 'Settings', icon: settingsIcon },
+  ],
+});
+output.pages[0].addBinding(render, 'format', { options: ['png', 'jpeg', 'webp'] });
+output.pages[1].addBinding(render, 'scale', { min: 1, max: 4, step: 1 });`}
+/>
+
+### Scrolling and collapsing
+
+Icons, content and controls share the pane's own scroll, so the icons move with their group and
+nothing is pinned over the page. A group is always tall enough for all of its icons. Collapsing
+the pane hides them, and reopening it keeps the selected page.

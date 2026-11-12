@@ -4,6 +4,7 @@ import type { TpInput } from '@tweakpad/ui';
 import { icon, searchIcon } from './icons.js';
 import { containerStyles, paneTokens } from './styles.js';
 
+/** Corner of the viewport a floating pane sits in. */
 export type PaneAnchor = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 
 /**

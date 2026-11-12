@@ -29,27 +29,71 @@ import {
   type ValidatedInlineItems,
 } from './inline.js';
 
+/** Options of `addFolder()`. */
 export interface FolderParams {
+  /** Heading of the folder, and its name in history paths unless `id` is set. */
   title: string;
+  /**
+   * Whether the folder starts open. A closed folder's bindings sleep until it opens.
+   * @default true
+   */
   expanded?: boolean;
   /** Stable name in the pane's history paths, in place of the title. */
   id?: string;
 }
 
+/** One page of `TabsParams.pages`. */
 export interface TabPageParams {
+  /**
+   * Tab label, and the page's name in history paths unless `id` is set. Vertical tabs show it as
+   * the page heading.
+   */
   title: string;
   /** Stable name in the pane's history paths, in place of the title. */
   id?: string;
+  /** The tab's icon on vertical tabs, which require one; horizontal tabs show the title. */
   icon?: IconDefinition;
+  /** Any CSS color for the icon on vertical tabs. */
   color?: string;
+  /** Tooltip of the icon on vertical tabs, in place of the title. */
   hint?: string;
 }
 
-export type TabsParams = { selected?: number } & (
-  | { orientation?: 'horizontal'; pages: TabPageParams[] }
+/**
+ * Options of `addTabs()`: the pages, and either a row of text tabs or a column of icon tabs.
+ * Vertical tabs go only directly on the pane, and every page needs an icon.
+ */
+export type TabsParams = {
+  /**
+   * Index of the page shown first, 0-based.
+   * @default 0
+   */
+  selected?: number;
+} & (
   | {
+      /**
+       * `'horizontal'` shows text tabs above the pages; `'vertical'` shows an icon column along
+       * one edge of the group.
+       * @default 'horizontal'
+       */
+      orientation?: 'horizontal';
+      /** The pages, in order. Each becomes a `TabPageApi` in `TabsApi.pages`. */
+      pages: TabPageParams[];
+    }
+  | {
+      /**
+       * `'horizontal'` shows text tabs above the pages; `'vertical'` shows an icon column along
+       * one edge of the group.
+       * @default 'horizontal'
+       */
       orientation: 'vertical';
+      /**
+       * Edge of the icon column on vertical tabs. `'auto'` takes the left of right-anchored panes
+       * and the right of left-anchored panes.
+       * @default 'auto'
+       */
       side?: 'auto' | 'left' | 'right';
+      /** The pages, in order. Each becomes a `TabPageApi` in `TabsApi.pages`. */
       pages: (TabPageParams & { icon: IconDefinition })[];
     }
 );
@@ -65,6 +109,7 @@ export class ContainerApi {
   readonly #chunks: Chunk[] = [];
   readonly #children: Disposable[] = [];
   readonly #searchChildren = new Set<SearchNode>();
+  /** @internal This container's place in the search tree. */
   readonly searchNode: SearchScopeNode | SearchGroupNode;
   readonly #inlineEntries: { row: Row; metadata: SearchMetadata }[] = [];
 
@@ -81,7 +126,10 @@ export class ContainerApi {
       : { kind: 'scope', children: this.#searchChildren };
   }
 
-  /** Binds `target[key]` to an inline control chosen from its value and `params`. */
+  /**
+   * Binds `target[key]` to a control chosen from its value and `params`, and returns its handle.
+   * Throws for a value no control can show, such as an object that is not a color.
+   */
   addBinding<T extends object, K extends keyof T & PropertyKey>(
     target: T,
     key: K,
@@ -117,7 +165,7 @@ export class ContainerApi {
     return api;
   }
 
-  /** Adds one action using the library Button. Search matches its name and current title. */
+  /** Adds a button that calls `onClick` when pressed. Search matches its name and current title. */
   addButton(params: ButtonParams): ButtonApi {
     const row = new ButtonRow(this.context, params);
     this.#addRow(row, row.metadata);
@@ -154,7 +202,10 @@ export class ContainerApi {
     return api;
   }
 
-  /** Composes supported controls into one inline row and one complete search boundary. */
+  /**
+   * Adds bindings and buttons side by side in one row, searched and hidden as one control.
+   * `items` of the returned handle are their handles, in order. Throws for an empty row.
+   */
   addRow<const T extends readonly InlineItem[]>(
     params: InlineRowParams<T> & { items: ValidatedInlineItems<T> },
   ): InlineRowApi<T> {
@@ -206,6 +257,7 @@ export class ContainerApi {
     }
   }
 
+  /** Adds a folder of controls under a heading the user can collapse, and returns it. */
   addFolder(params: FolderParams): FolderApi {
     const element = document.createElement(TweakFolder.tagName) as TweakFolder;
     element.heading = params.title;
@@ -218,6 +270,10 @@ export class ContainerApi {
     return folder;
   }
 
+  /**
+   * Adds a group of tab pages, one shown at a time, and returns it. Vertical tabs throw anywhere
+   * but directly on the pane, or when a page has no icon.
+   */
   addTabs(params: TabsParams): TabsApi {
     const vertical = params.orientation === 'vertical';
     if (vertical && !this.supportsVerticalTabs)
@@ -244,12 +300,15 @@ export class ContainerApi {
     return tabs;
   }
 
-  /** Filters fields by property name or visible label, returning the number of matches. */
+  /**
+   * @internal The pane's search: filters fields by property name or label, returning the number
+   * of matches.
+   */
   filter(query: string): number {
     return filterSearchTree(this.searchNode, query);
   }
 
-  /** Removes everything this container holds. */
+  /** Removes everything this container holds and stops its work. */
   dispose(): void {
     for (const child of this.#children) child.dispose();
     this.#children.length = 0;
@@ -289,9 +348,11 @@ export class ContainerApi {
   }
 }
 
+/** A folder of controls, as `addFolder` returns it. It takes controls like the pane. */
 export class FolderApi extends ContainerApi {
   constructor(
     context: PaneContext,
+    /** The folder's `<tweak-folder>` element. */
     readonly element: TweakFolder,
     path: readonly string[] = [],
   ) {
@@ -306,6 +367,7 @@ export class FolderApi extends ContainerApi {
     );
   }
 
+  /** Heading of the folder. Changing it leaves its history paths as they were. */
   get title(): string {
     return this.element.heading;
   }
@@ -314,6 +376,7 @@ export class FolderApi extends ContainerApi {
     this.element.heading = title;
   }
 
+  /** Whether the folder is open. A closed folder's bindings sleep until it opens. */
   get expanded(): boolean {
     return this.element.open;
   }
@@ -322,15 +385,18 @@ export class FolderApi extends ContainerApi {
     this.element.open = expanded;
   }
 
+  /** Removes the folder and everything in it. */
   override dispose(): void {
     super.dispose();
     this.element.remove();
   }
 }
 
+/** One page of a tab group, from `TabsApi.pages`. It takes controls like the pane. */
 export class TabPageApi extends ContainerApi {
   constructor(
     context: PaneContext,
+    /** The page's `<tweak-tab-page>` element. */
     readonly element: TweakTabPage,
     path: readonly string[] = [],
   ) {
@@ -338,15 +404,20 @@ export class TabPageApi extends ContainerApi {
   }
 }
 
+/** A group of tab pages, as `addTabs` returns it. */
 export class TabsApi {
+  /** @internal This group's place in the search tree. */
   readonly searchNode: SearchScopeNode;
   constructor(
+    /** The group's `<tweak-tabs>` element. */
     readonly element: TweakTabs,
+    /** The pages, in the order `pages` declared them. */
     readonly pages: TabPageApi[],
   ) {
     this.searchNode = { kind: 'scope', children: pages.map((page) => page.searchNode) };
   }
 
+  /** Index of the page shown, 0-based. Setting it clamps the index to the pages. */
   get selected(): number {
     return this.element.selected;
   }
@@ -355,10 +426,12 @@ export class TabsApi {
     this.element.select(index);
   }
 
+  /** @internal Filters the pages' fields, returning the number of matches. */
   filter(query: string): number {
     return filterSearchTree(this.searchNode, query);
   }
 
+  /** Removes the tab group and everything in its pages. */
   dispose(): void {
     for (const page of this.pages) page.dispose();
     this.element.remove();
@@ -370,25 +443,30 @@ export class BindingApi<T> {
   constructor(
     private readonly binding: Binding<T>,
     private readonly row: ControlRow<T>,
+    /** The control in use, as `view` chose it or inferred from the value. */
     readonly kind: ControlKind,
     private readonly context: PaneContext,
     private readonly untrack?: () => void,
   ) {}
 
-  /** The value last shown or set. */
+  /**
+   * The value last shown or set. Setting it writes the target and the control, and fires
+   * `change` and `finish` as a finished edit.
+   */
   get value(): T {
     return this.binding.value;
   }
 
-  /** Writes the target and the control. */
   set value(value: T) {
     this.binding.set(value);
   }
 
+  /** The bound property key, as text. */
   get label(): string {
     return String(this.binding.key);
   }
 
+  /** Whether the control is shown dimmed and ignores input. */
   get disabled(): boolean {
     return this.row.disabled;
   }
@@ -397,6 +475,7 @@ export class BindingApi<T> {
     this.row.setDisabled(disabled);
   }
 
+  /** Whether the control is hidden. A hidden binding stops sampling and is left out of search. */
   get hidden(): boolean {
     return this.row.hidden;
   }
@@ -411,16 +490,24 @@ export class BindingApi<T> {
     return this.row.element;
   }
 
-  /** Re-reads the target now; for bindings with `interval: -1`. */
+  /** Re-reads the target now and shows its value; for bindings that only refresh manually. */
   refresh(): void {
     this.binding.refresh();
   }
 
-  /** `change`: once per frame at most while the user edits. `finish`: when the edit ends. */
+  /**
+   * Listens for edits of the value. Returns a function that removes the listener. Changes the
+   * application makes to the object itself fire nothing.
+   * @event change - Fires at most once per frame while the user edits, and when `value` is set,
+   * with `{ value, last }`.
+   * @event finish - Fires when an edit ends (release, Enter, blur) or `value` is set, with
+   * `{ value, last: true }`.
+   */
   on(type: 'change' | 'finish', listener: ChangeListener<T>): () => void {
     return this.binding.on(type, listener);
   }
 
+  /** Removes the control and stops sampling the property and recording it in the history. */
   dispose(): void {
     this.untrack?.();
     this.context.bindings.delete(this.binding as Binding<unknown>);

@@ -23,8 +23,11 @@ export interface StoredChange {
   g?: number;
 }
 
+/** One version as stored: the working version or a frozen one. */
 export interface StoredVersion {
+  /** Version number, counting up from 1 as versions are made. */
   id: number;
+  /** Name given by `advance(label)` or `rename()`. */
   label?: string;
   /** Epoch ms. */
   created: number;
@@ -32,13 +35,17 @@ export interface StoredVersion {
   updated: number;
   /** Frozen versions never change again; the last version is the working one and never frozen. */
   frozen: boolean;
+  /** Control values by path. */
   values: Record<string, StoredValue>;
+  /** Log of the version's finished changes, oldest first. */
   changes: StoredChange[];
 }
 
 /** What a history serializes to: `versions` oldest first, the last one being the working version. */
 export interface HistoryDocument {
+  /** Format version. A document of a newer format is left untouched. */
   format: 1;
+  /** All versions, oldest first; the last is the working version. */
   versions: StoredVersion[];
 }
 
@@ -66,37 +73,59 @@ export interface TrackedControl {
 
 /** Synchronous key-value storage, such as `localStorage`. */
 export interface HistoryStorage {
+  /** Returns the text stored under `key`, or null when there is none. */
   read(key: string): string | null;
+  /** Stores `data` under `key`. Throwing (e.g. when full) makes the history trim and retry. */
   write(key: string, data: string): void;
+  /** Deletes what is stored under `key`. */
   remove(key: string): void;
 }
 
+/**
+ * When the history makes versions. `'manual'`: one working version until `advance()`. `'auto'`:
+ * also a new version on each reload whose previous session changed something.
+ */
 export type HistoryMode = 'manual' | 'auto';
 
+/** Options of a pane's version history, its `history` option. */
 export interface HistoryOptions {
   /** Storage namespace, stored as `devkit:history:<key>`. Default: the pane title, else `'pane'`. */
   key?: string;
-  /** `'local'` (default) survives reloads; `'memory'` is lost on reload; or any `HistoryStorage`. */
+  /**
+   * `'local'` survives reloads; `'memory'` is lost on reload; or any `HistoryStorage`. Where
+   * `localStorage` is blocked, `'local'` falls back to memory with a warning.
+   * @default 'local'
+   */
   storage?: 'local' | 'memory' | HistoryStorage;
   /**
-   * `'manual'` (default): one working version until `advance()`. `'auto'`: also a new version on
-   * each reload whose previous session changed something.
+   * `'manual'`: one working version until `advance()`. `'auto'`: also a new version on each
+   * reload whose previous session changed something.
+   * @default 'manual'
    */
   mode?: HistoryMode;
-  /** Frozen versions kept; the oldest go first. Default 50. */
+  /**
+   * Frozen versions kept; the oldest go first.
+   * @default 50
+   */
   limit?: number;
-  /** Changes logged per version; the oldest go first. Default 200. */
+  /**
+   * Changes logged per version; the oldest go first.
+   * @default 200
+   */
   maxChanges?: number;
 }
 
 /** One finished change as the history reports it. */
 export interface HistoryChange {
+  /** Path of the control, e.g. `Lighting/Sun/intensity`. */
   readonly path: string;
   /** Absent for the first value a path has in its version. */
   readonly from?: HistoryValue;
+  /** Value after the change. */
   readonly to: HistoryValue;
   /** Epoch ms. */
   readonly at: number;
+  /** `'edit'` for a finished edit, `'restore'` for a value applied by `restore()`. */
   readonly source: 'edit' | 'restore';
   /** Shared by the changes of one restore. */
   readonly group?: number;
@@ -104,19 +133,28 @@ export interface HistoryChange {
 
 /** A read-only view of one version. */
 export interface HistoryVersion {
+  /** Version number, counting up from 1 as versions are made. */
   readonly id: number;
+  /** Name given by `advance(label)` or `rename()`. */
   readonly label?: string;
+  /** Epoch ms. */
   readonly created: number;
+  /** Epoch ms of the last recorded change. */
   readonly updated: number;
+  /** Frozen versions never change again; only the working version is not frozen. */
   readonly frozen: boolean;
+  /** Control values by path. */
   readonly values: Readonly<Record<string, HistoryValue>>;
+  /** Log of the version's finished changes, oldest first. */
   readonly changes: readonly HistoryChange[];
 }
 
+/** What `diff()` returns: the paths that differ between two versions. */
 export interface HistoryDiff {
   /** Paths only in the newer version. */
   readonly added: readonly string[];
   /** Paths only in the older version. */
   readonly removed: readonly string[];
+  /** Paths in both versions with different values, from the older value to the newer. */
   readonly changed: readonly { path: string; from: HistoryValue; to: HistoryValue }[];
 }

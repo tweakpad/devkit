@@ -25,3 +25,5 @@ jobs:
       - run: npm run typecheck
       # Builds, packs and installs the tarball into a consumer project (files, exports, types).
       - run: npm run test:package
+      # Builds the Storybook of showcases and documentation pages, so a broken story fails here.
+      - run: npm run build-storybook

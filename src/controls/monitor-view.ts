@@ -4,18 +4,39 @@ import { GraphMonitorView } from '../monitors/graph-monitor.js';
 import { TextMonitorView } from '../monitors/text-monitor.js';
 import type { GraphGuide } from '../graphs/types.js';
 
+/**
+ * How a `view: 'monitor'` binding is shown, its `monitor` option. The graph options apply only
+ * with `view: 'graph'`.
+ */
 export interface MonitorOptions {
-  /** Text is the default; graph draws numeric history supplied by the binding. */
+  /**
+   * `'text'` shows the value; `'graph'` draws the history of a numeric value with its latest
+   * value.
+   * @default 'text'
+   */
   view?: 'text' | 'graph';
-  /** Graph history capacity. Default 64, at least 2. */
+  /**
+   * Samples the graph keeps, at least 2.
+   * @default 64
+   */
   bufferSize?: number;
-  /** Graph line color, any CSS color. Default `--tp-chart-1`. */
+  /**
+   * Graph line color, any CSS color.
+   * @default var(--tp-chart-1)
+   */
   color?: string;
-  /** Graph area: `true`, an opacity, or `false`. Default on. */
+  /**
+   * Area under the graph line: `true`, an opacity, or `false`. `true` uses an opacity of 0.15.
+   * @default true
+   */
   fill?: boolean | number;
-  /** Horizontal reference lines in the binding's units. */
+  /** Horizontal reference lines in the binding's units, drawn dashed in front of the data. */
   guides?: readonly GraphGuide[];
-  /** How omitted `min`/`max` fit the data: `'absolute'` (default, includes zero) or `'relative'`. */
+  /**
+   * How omitted `min`/`max` fit the graph to the data: `'absolute'` includes zero, `'relative'`
+   * hugs the data.
+   * @default 'absolute'
+   */
   scale?: 'absolute' | 'relative';
 }
 

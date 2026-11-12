@@ -18,13 +18,29 @@ import {
 import type { PaneContext } from './context.js';
 import { createGraphModel, createGraphRow, GraphApi, validateTiming } from './graph.js';
 
+/**
+ * Options of `addPerformanceMonitor()`: the graph options except `series`, `pages` and `format`,
+ * plus the metrics, their graphs and where frames are measured.
+ */
 export interface PerformanceParams extends Omit<
   GraphParams,
   'series' | 'label' | 'interval' | 'pages' | 'format'
 > {
-  /** Name for search and assistive technology. Default `'Performance'`; hidden unless `showLabel`. */
+  /**
+   * Name for search and assistive technology, shown in the headers only with `showLabel`.
+   * @default 'Performance'
+   */
   label?: string;
-  /** Metrics in order. Default `['fps', 'frameTime', 'heap']` (`heap` only where measurable). */
+  /**
+   * Show the label and the graph's name at the start of each graph's header.
+   * @default false
+   */
+  showLabel?: boolean;
+  /**
+   * Metrics in order: built-in ids, built-ins with options changed, or custom definitions.
+   * `heap` is left out where the browser cannot measure it.
+   * @default ['fps', 'frameTime', 'heap']
+   */
   metrics?: readonly PerformanceMetric[];
   /**
    * The whole layout: stacked graphs by name, top to bottom, each listing metric ids in order,
@@ -33,14 +49,31 @@ export interface PerformanceParams extends Omit<
    * `heap` outside Chromium) are skipped. Default: one graph per metric `graph` name.
    */
   graphs?: PerformanceGraphs;
-  /** Default layout of every graph. `'overlay'` (default): its metrics share one plot. */
+  /**
+   * Layout of every graph that sets none: `'overlay'` puts its metrics on one plot, `'paged'`
+   * shows one at a time.
+   * @default 'overlay'
+   */
   layout?: GraphLayout;
-  /** Header markers, shown on the first graph. */
+  /** Header markers, shown on the first graph with the adapters' markers. */
   markers?: readonly GraphMarker[];
-  /** Measurement window and sample period, in ms. Default 250. */
+  /**
+   * Measurement window and sample period, in ms.
+   * @default 250
+   */
   interval?: number;
-  /** Where frames are measured. Default `'auto'`: devkit's loop until the first `begin()`. */
+  /**
+   * Milliseconds between readout updates. The last value of a burst is always shown.
+   * @default interval
+   */
+  headerInterval?: number;
+  /**
+   * Where frames are measured: `'auto'` uses devkit's loop until the first `begin()`, `'raf'`
+   * only devkit's loop, `'manual'` only `begin()` and `end()`.
+   * @default 'auto'
+   */
   source?: FrameSource;
+  /** Framework adapters to attach: their metrics, markers and setup. */
   adapters?: readonly PerformanceAdapter[];
 }
 
@@ -201,6 +234,7 @@ export class PerformanceMonitorApi implements PerformanceMonitorHandle {
     return this.#graphs.find((graph) => graph.name === name)?.api;
   }
 
+  /** Whether every graph is hidden; setting it hides or shows them all. */
   get hidden(): boolean {
     return this.#graphs.every((graph) => graph.row.hidden);
   }
@@ -210,6 +244,7 @@ export class PerformanceMonitorApi implements PerformanceMonitorHandle {
     this.#context.refreshSearch?.();
   }
 
+  /** Whether every graph is disabled; setting it disables or enables them all. */
   get disabled(): boolean {
     return this.#graphs.every((graph) => graph.row.disabled);
   }
@@ -290,6 +325,7 @@ export class PerformanceMonitorApi implements PerformanceMonitorHandle {
     return this.#attach(adapter, ids);
   }
 
+  /** Detaches every adapter, running its teardown, and removes the graphs. */
   dispose(): void {
     this.#disposing = true;
     for (const detach of [...this.#detachers]) detach();

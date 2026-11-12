@@ -13,9 +13,9 @@ export interface FrameSample {
 }
 
 /**
- * - `'raf'`: measures the frames the browser presents, from devkit's own frame loop.
- * - `'manual'`: measures the application loop between `begin()` and `end()`.
- * - `'auto'` (default): `'raf'` until the first `begin()`, then `'manual'`.
+ * Where a performance monitor measures frames. `'raf'`: the frames the browser presents, from
+ * devkit's own frame loop. `'manual'`: the application loop between `begin()` and `end()`.
+ * `'auto'`: `'raf'` until the first `begin()`, then `'manual'`.
  */
 export type FrameSource = 'auto' | 'raf' | 'manual';
 

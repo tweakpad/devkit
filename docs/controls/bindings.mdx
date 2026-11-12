@@ -1,0 +1,204 @@
+---
+title: Bindings
+description: A control bound to one property of your object, chosen from the property's value.
+symbol: pane.addBinding(target, key, params)
+api: [BindingParams, BindingApi, ControlKind, OptionList, ChangeEvent, ChangeListener]
+---
+
+<Preview
+  title="Bindings"
+  code={`<div id="bindings-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const light = { intensity: 1.2, castShadows: true, tint: '#ffd8a8', mode: 'point' };
+const pane = new Pane({ container: document.getElementById('bindings-hero'), title: 'Light' });
+pane.addBinding(light, 'intensity', { min: 0, max: 4 });
+pane.addBinding(light, 'castShadows', { label: 'Shadows' });
+pane.addBinding(light, 'tint');
+pane.addBinding(light, 'mode', { options: ['point', 'spot', 'directional'] });`}
+/>
+
+## Usage
+
+`addBinding` puts a control on a pane, folder or tab page for one property of your object. The
+control is inferred from the property's value and the parameters, so most bindings need only a
+range or a list of options. `view` overrides the inference, and monitors are bindings with
+`view: 'monitor'`. The returned handle reads and sets the value, listens to edits and removes the
+control.
+
+<Code
+  code={`const params = { speed: 0.6, paused: false };
+pane.addBinding(params, 'speed', { min: 0, max: 4 });
+const paused = pane.addBinding(params, 'paused');`}
+  language="ts"
+/>
+
+### Numbers
+
+A number with both `min` and `max` becomes a slider. Without a full range it becomes a number
+field with a stepper, which suits values without natural bounds, such as a seed or a count. `step`
+sets the increment of either.
+
+<Preview
+  title="Numbers"
+  code={`<div id="bindings-numbers"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const particles = { rate: 120, seed: 4087 };
+const pane = new Pane({
+  container: document.getElementById('bindings-numbers'),
+  title: 'Particles',
+});
+pane.addBinding(particles, 'rate', { label: 'Emit rate', min: 0, max: 500, step: 10 });
+pane.addBinding(particles, 'seed', { step: 1 });`}
+/>
+
+### Booleans
+
+A boolean becomes a checkbox. `view: 'switch'` shows a switch instead, which reads better for a
+setting that takes effect at once, such as turning a system on or off.
+
+<Preview
+  title="Booleans"
+  code={`<div id="bindings-booleans"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const audio = { muted: false, reverb: true };
+const pane = new Pane({ container: document.getElementById('bindings-booleans'), title: 'Audio' });
+pane.addBinding(audio, 'muted');
+pane.addBinding(audio, 'reverb', { view: 'switch' });`}
+/>
+
+### Choices
+
+`options` turns any value into a pick from a list, shown as a select. An object maps labels to
+values, and an array lists values that are their own labels, or `{ label, value }` pairs. The
+values can be anything, numbers or objects included.
+
+<Preview
+  title="Options"
+  code={`<div id="bindings-options"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const render = { resolution: 1, antialias: 'msaa' };
+const pane = new Pane({ container: document.getElementById('bindings-options'), title: 'Render' });
+pane.addBinding(render, 'resolution', { options: { Half: 0.5, Native: 1, Double: 2 } });
+pane.addBinding(render, 'antialias', {
+  label: 'Anti-aliasing',
+  options: ['off', 'fxaa', 'msaa'],
+});`}
+/>
+
+### Colors and text
+
+A CSS color string, or an `{ r, g, b }` object, becomes a color input. Any other string becomes a
+text field.
+
+<Preview
+  title="Colors and text"
+  code={`<div id="bindings-colors-text"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const fog = { color: '#8fa3b8', layer: 'Background haze' };
+const pane = new Pane({ container: document.getElementById('bindings-colors-text'), title: 'Fog' });
+pane.addBinding(fog, 'color');
+pane.addBinding(fog, 'layer', { label: 'Layer name' });`}
+/>
+
+### Labels
+
+A control is labeled with its property key unless `label` gives it a readable name. Search finds
+the control by either one.
+
+<Preview
+  title="Labels"
+  code={`<div id="bindings-labels"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const camera = { fov: 50, dof: 2.8 };
+const pane = new Pane({ container: document.getElementById('bindings-labels'), title: 'Camera' });
+pane.addBinding(camera, 'fov', { label: 'Field of view', min: 10, max: 120, step: 1 });
+pane.addBinding(camera, 'dof', { label: 'Aperture', min: 1.4, max: 22 });`}
+/>
+
+### Disabled and hidden
+
+A disabled control shows its value but takes no edits, and search still finds it. A hidden
+control disappears from the pane and from search, and stops reading its property. Both start from
+the parameters and change through the handle.
+
+<Preview
+  title="Disabled and hidden"
+  code={`<div id="bindings-disabled"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const physics = { gravity: 9.8, simulate: false };
+const pane = new Pane({
+  container: document.getElementById('bindings-disabled'),
+  title: 'Physics',
+});
+const gravity = pane.addBinding(physics, 'gravity', { min: 0, max: 20, disabled: true });
+pane.addBinding(physics, 'simulate').on('change', ({ value }) => {
+  gravity.disabled = !value;
+});`}
+/>
+
+### Setting values
+
+The control follows your object on its own: change the property and the control shows it. Setting
+`value` on the handle instead writes both the property and the control, and announces the change
+as a finished edit.
+
+<Code
+  code={`const speed = pane.addBinding(params, 'speed', { min: 0, max: 4 });
+speed.value = 1.5;`}
+  language="ts"
+/>
+
+### Events
+
+The property is written as the user edits, at pointer rate, so your application sees a drag as it
+happens. `change` listeners hear about it at most once per frame while the edit goes on, and
+`finish` fires once when it ends: a released drag, an Enter or blur in a text field, a pick. Use
+`finish` for work too costly to repeat during a drag, such as saving or rebuilding a mesh.
+
+<Code
+  code={`const detail = pane.addBinding(terrain, 'detail', { min: 1, max: 8, step: 1 });
+detail.on('change', ({ value }) => preview.setDetail(value));
+const stop = detail.on('finish', ({ value }) => rebuildMesh(value));
+stop();`}
+  language="ts"
+/>
+
+While the user holds a control, the binding stops reading the property, so an application that
+writes the same property every frame does not pull the control away from the pointer. It shows
+the property's value again when the user lets go.
+
+### Sampling
+
+A binding reads its property every frame while its control is on screen, and not at all while it
+is scrolled away, collapsed or on another tab. `interval` reads one binding less often, in
+milliseconds, or with `-1` only when you call `refresh()` on it or on the pane.
+
+<Code
+  code={`const memory = pane.addBinding(stats, 'heapMb', { interval: 500 });
+const level = pane.addBinding(save, 'level', { interval: -1 });
+loadGame(save);
+level.refresh();`}
+  language="ts"
+/>
+
+### History identity
+
+When the pane keeps a version history, each binding is stored under the folder and tab page names
+that hold it, then its property key. `id` replaces the key with a stable name, so stored values
+survive renames and two bindings of the same key in one container stay apart. `history: false`
+leaves a binding out of the history, for values such as a random seed that a restored setup
+should not bring back.
+
+<Code
+  code={`const sun = pane.addFolder({ title: 'Sun light', id: 'sun' });
+sun.addBinding(light, 'intensity', { id: 'power' }); // stored as sun/power
+sun.addBinding(debug, 'seed', { history: false }); // never stored`}
+  language="ts"
+/>
+
+### Disposing
+
+`dispose()` removes the control and stops reading the property. Disposing a folder, tab page or
+the pane disposes its bindings with it.
+
+<Code code={`paused.dispose();`} language="ts" />

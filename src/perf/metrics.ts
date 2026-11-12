@@ -12,8 +12,9 @@ export interface PerformanceMetricDefinition extends GraphSeries {
   /** Called once per window with the frame measurements; wins over `read`. */
   sample?: (frame: Readonly<FrameSample>) => number | null;
   /**
-   * The stacked graph this metric joins unless `graphs` places it: `'frame'` (default) for
-   * timing and per-frame counts, `'memory'` for resources, or any other name for a graph of its own.
+   * The stacked graph this metric joins unless `graphs` places it: `'frame'` for timing and
+   * per-frame counts, `'memory'` for resources, or any other name for a graph of its own.
+   * @default 'frame'
    */
   graph?: string;
 }
@@ -22,22 +23,33 @@ export interface PerformanceMetricDefinition extends GraphSeries {
 export const FRAME_GRAPH = 'frame';
 export const MEMORY_GRAPH = 'memory';
 
+/**
+ * A metric devkit measures itself: `'fps'` (frames per second), `'frameTime'` (mean ms per frame)
+ * or `'heap'` (used JS heap in MB, where the browser exposes it).
+ */
 export type BuiltinMetricId = 'fps' | 'frameTime' | 'heap';
 
 /** A built-in metric with some of its options changed, e.g. `{ id: 'fps', fill: 0.2 }`. */
-export type BuiltinMetricOverride = { id: BuiltinMetricId } & Partial<
-  Omit<PerformanceMetricDefinition, 'id'>
->;
+export type BuiltinMetricOverride = {
+  /** The built-in metric to change. */
+  id: BuiltinMetricId;
+} & Partial<Omit<PerformanceMetricDefinition, 'id'>>;
 
+/**
+ * One metric of a performance monitor: a built-in by id, a built-in with options changed, or a
+ * custom metric definition.
+ */
 export type PerformanceMetric =
   BuiltinMetricId | BuiltinMetricOverride | PerformanceMetricDefinition;
 
-/** One stacked graph: its metric ids in order, and how they share the graph. */
 /** One stacked graph: its metric ids, and how they share the graph. Give `metrics` or `pages`. */
 export interface PerformanceGraphOptions {
   /** Metric ids in order, overlaid or paged as `layout` says. */
   metrics?: readonly string[];
-  /** `'overlay'` (default: the monitor's `layout`) or `'paged'`. Ignored with `pages`. */
+  /**
+   * `'overlay'` puts the metrics on one plot; `'paged'` shows one at a time. Defaults to the
+   * monitor's `layout`. Ignored with `pages`.
+   */
   layout?: GraphLayout;
   /**
    * Explicit pages of metric ids, e.g. `[['fps', 'frameTime'], ['drawCalls']]`: each page
@@ -53,6 +65,7 @@ export type PerformanceGraphs = Readonly<
 
 /** Plugs a renderer or framework into a performance monitor without devkit depending on it. */
 export interface PerformanceAdapter {
+  /** Name of the adapter, e.g. the framework it measures. */
   name: string;
   /** Extra series, e.g. GPU memory, draw calls or GPU time. */
   metrics?: readonly PerformanceMetric[];
@@ -64,9 +77,16 @@ export interface PerformanceAdapter {
 
 /** What an adapter's `attach` may use; `PerformanceMonitorApi` implements it. */
 export interface PerformanceMonitorHandle {
+  /** Marks the start of an application frame. Switches an `'auto'` monitor to the app's loop. */
   begin(): void;
+  /** Marks the end of the application frame; frame time becomes the work in between. */
   end(): void;
+  /**
+   * Reports a metric's latest value, held and recorded with every sample until reported again.
+   * Reports for metrics the monitor does not show are ignored.
+   */
   report(id: string, value: number | null): void;
+  /** Sets a marker on the first graph's header, or removes it with null. */
   setMarker(id: string, text: string | null): void;
 }
 

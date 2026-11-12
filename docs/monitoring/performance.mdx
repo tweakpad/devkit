@@ -1,0 +1,293 @@
+---
+title: Performance monitor
+description: Ready-made graphs of frame rate, frame time and memory, extended with your renderer's metrics.
+symbol: pane.addPerformanceMonitor(params)
+api: [PerformanceParams, PerformanceMonitorApi, PerformanceAdapter, PerformanceMetric, PerformanceMetricDefinition, PerformanceGraphs, PerformanceGraphOptions, BuiltinMetricId, BuiltinMetricOverride, PerformanceMonitorHandle, FrameSample, FrameSource]
+---
+
+<Preview
+  title="Performance monitor"
+  code={`<div id="perf-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-hero'), title: 'Stats' });
+pane.addPerformanceMonitor();`}
+/>
+
+## Usage
+
+`addPerformanceMonitor` adds graphs that measure frames themselves, with no setup. It stacks two
+graphs fed by one frame meter:
+
+- **frame**: frames per second and frame time, overlaid, each value in its line's color with its
+  unit attached (`60FPS 16.7ms`);
+- **memory**: the JS heap, such as `55 MB (53–56)`: the latest value, then the lowest and highest
+  in the visible history, which a metric shows when it has its graph to itself.
+
+The monitor measures and samples once per 250 ms window and keeps 120 samples, so it shows the
+last 30 seconds. It is built on graphs, so what a graph does, its monitor graphs do too.
+
+<Code code={`const monitor = pane.addPerformanceMonitor();`} language="ts" />
+
+### Choosing metrics
+
+The built-in metrics are `fps`, frames per second over each window, `frameTime`, the mean
+milliseconds per frame, and `heap`, the used JS heap in megabytes. `metrics` chooses which ones
+appear and in what order. `heap` is left out where the browser does not expose the heap, which
+only Chromium does, and so is the memory graph when nothing else goes in it.
+
+<Preview
+  title="Choosing metrics"
+  code={`<div id="perf-metrics"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-metrics'), title: 'Frame' });
+pane.addPerformanceMonitor({ metrics: ['fps', 'frameTime'] });`}
+/>
+
+### Changing built-in metrics
+
+List a built-in as an object with its id and the options to change; the rest of its definition is
+kept. Every series option of a graph works the same way on built-ins and on your own metrics, from
+`color` and `fill` to a fixed `min` and `max` in place of the fitted range.
+
+<Preview
+  title="Changing built-in metrics"
+  code={`<div id="perf-overrides"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-overrides'), title: 'Frame' });
+pane.addPerformanceMonitor({
+  metrics: [
+    { id: 'fps', fill: 0.2, color: '#22d3ee' },
+    { id: 'frameTime', min: 0, max: 33.4 },
+    'heap',
+  ],
+});`}
+/>
+
+### Ranges
+
+Each metric is drawn against its own range, fitted to the visible data. By default the range
+includes zero, so 120 draw calls varying by three either way read as a steady line. A relative
+scale hugs the data instead, for metrics where small variations matter, such as frame time
+while you chase a stutter.
+
+<Preview
+  title="Ranges"
+  code={`<div id="perf-ranges"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-ranges'), title: 'Frame' });
+pane.addPerformanceMonitor({ metrics: ['fps', { id: 'frameTime', scale: 'relative' }] });`}
+/>
+
+### Guides
+
+Each built-in marks the average of its visible history with a dashed line in its own color.
+Listing `guides` replaces them, so keep the average and add a fixed line, such as a frame budget,
+to see how far frames run over it.
+
+<Preview
+  title="Guides"
+  code={`<div id="perf-guides"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-guides'), title: 'Frame' });
+pane.addPerformanceMonitor({
+  metrics: [
+    'fps',
+    { id: 'frameTime', guides: [{ value: 'average' }, { value: 1000 / 60, label: '60 Hz' }] },
+  ],
+});`}
+/>
+
+### Measuring your own loop
+
+Without setup, the monitor measures the frames the browser actually presents, from the pane's own
+frame loop, and frame time is the interval between frames. Call `begin()` and `end()` around your
+frame to measure your loop instead: from the first `begin()` on, FPS counts your frames and frame
+time becomes the work between the two calls. If your loop stops, FPS falls to 0.
+
+<Code
+  code={`function frame() {
+  monitor.begin();
+  renderer.render(scene, camera);
+  monitor.end();
+  requestAnimationFrame(frame);
+}`}
+  language="ts"
+/>
+
+`source: 'raf'` ignores `begin()`, and `source: 'manual'` measures only between `begin()` and
+`end()`. `monitor.meter` holds the latest window's measurements, and `monitor.mode` reports which
+loop is being measured.
+
+### Custom metrics
+
+A metric is a graph series with two additions: the `graph` it joins, and an optional
+`sample(frame)` called once per window with the frame measurements. Metrics can also `read()` a
+value each window, or receive values from `monitor.report(id, value)`. A reported value is held
+until it is reported again, which suits results that arrive asynchronously, such as GPU timer
+queries. `addMetric` adds one to a running monitor.
+
+<Preview
+  title="Custom metrics"
+  code={`<div id="perf-custom"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('perf-custom'), title: 'Budget' });
+const monitor = pane.addPerformanceMonitor({ metrics: ['frameTime'] });
+monitor.addMetric({
+  id: 'budget',
+  label: 'Budget used',
+  unit: '%',
+  precision: 0,
+  max: 100,
+  graph: 'frame',
+  sample: (frame) => (frame.frameTime / (1000 / 60)) * 100,
+});`}
+/>
+
+A metric joins the graph its `graph` names: `'frame'`, the default, for timing and per-frame counts
+such as draw calls, `'memory'` for resources such as GPU memory or triangle counts, or any other
+name for a graph of its own. Graphs stack in the order their names first appear. A metric added
+later joins the graph it names, or the last graph when there is no such graph, and a graph left
+without metrics by `removeMetric` is hidden.
+
+### Adapters
+
+The monitor never imports a rendering framework, and browsers expose no GPU memory API. An
+adapter connects what only your renderer knows, such as GPU memory, draw calls, GPU time and the
+rendering backend, as metrics and header markers. Pass adapters in `adapters`; their markers, like
+the monitor's own `markers`, show on the first graph.
+
+<Preview
+  title="Adapters"
+  code={`<div id="perf-adapters"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const renderer = { backend: 'WebGPU', info: { calls: 120, textureBytes: 96 * 1024 * 1024 } };
+setInterval(() => {
+  renderer.info.calls = 118 + Math.round(Math.random() * 6);
+}, 100);
+
+const rendererAdapter = {
+  name: 'renderer',
+  markers: [{ id: 'backend', title: 'Rendering backend', read: () => renderer.backend }],
+  metrics: [
+    {
+      id: 'drawCalls',
+      label: 'Draw calls',
+      unit: 'calls',
+      precision: 0,
+      read: () => renderer.info.calls,
+    },
+    {
+      id: 'gpuMemory',
+      label: 'GPU memory',
+      unit: 'MB',
+      precision: 0,
+      graph: 'memory',
+      read: () => renderer.info.textureBytes / (1024 * 1024),
+    },
+  ],
+};
+
+const pane = new Pane({ container: document.getElementById('perf-adapters'), title: 'Renderer' });
+pane.addPerformanceMonitor({ metrics: ['fps', 'frameTime'], adapters: [rendererAdapter] });`}
+/>
+
+`monitor.use(adapter)` attaches one later and returns a function that detaches its metrics,
+markers and teardown. An adapter's `attach(monitor)` runs when it is attached and may return that
+teardown, for adapters that report values themselves. Renderers that reset their counters every
+frame should be read after rendering, by reporting the counts from your loop.
+
+<Code
+  code={`const gpuTimer: PerformanceAdapter = {
+  name: 'gpu-timer',
+  metrics: [{ id: 'gpuTime', label: 'GPU', unit: 'ms', precision: 2 }],
+  attach: (monitor) => queries.onResult((ms) => monitor.report('gpuTime', ms)),
+};
+
+const detach = monitor.use(gpuTimer);`}
+  language="ts"
+/>
+
+Check the property names your adapter reads against the renderer version you use; the adapter is
+the only place that knows them.
+
+### Stacked graphs
+
+`graphs` is the whole layout, top to bottom: each entry is a named graph listing its metric ids, or
+options with them. Use it to choose metrics, order them, combine them or give any metric a graph
+of its own. Metrics it does not list are left out, adapters' included, and reports for them are
+ignored. Ids that are not available, such as `heap` outside Chromium, are skipped, and a graph left
+with no metrics is not shown.
+
+<Preview
+  title="Stacked graphs"
+  code={`<div id="perf-graphs"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const world = { bodies: 1800 };
+setInterval(() => {
+  world.bodies = 1800 + Math.round(Math.sin(Date.now() / 2000) * 400);
+}, 250);
+
+const pane = new Pane({ container: document.getElementById('perf-graphs'), title: 'Physics' });
+pane.addPerformanceMonitor({
+  metrics: [
+    'fps',
+    'frameTime',
+    { id: 'bodies', label: 'Bodies', precision: 0, read: () => world.bodies },
+  ],
+  graphs: { frame: ['fps', 'frameTime'], world: ['bodies'] },
+});`}
+/>
+
+### Pages
+
+The metrics of a graph share one plot unless its `layout` is `'paged'`, which shows one metric at a
+time; click the graph to show the next. The monitor's `layout` sets the default for every graph. A
+graph's `pages` mixes both: each page overlays its metrics, and clicking shows the next page.
+Unavailable ids are skipped and pages left empty are dropped.
+
+<Preview
+  title="Pages"
+  code={`<div id="perf-pages"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const scene = { calls: 120 };
+setInterval(() => {
+  scene.calls = 118 + Math.round(Math.random() * 6);
+}, 100);
+
+const pane = new Pane({ container: document.getElementById('perf-pages'), title: 'Renderer' });
+pane.addPerformanceMonitor({
+  metrics: [
+    'fps',
+    'frameTime',
+    { id: 'drawCalls', label: 'Draw calls', unit: 'calls', precision: 0, read: () => scene.calls },
+  ],
+  graphs: { frame: { pages: [['fps', 'frameTime'], ['drawCalls']] } },
+});`}
+/>
+
+### Working with the graphs
+
+Each stacked graph is a regular graph handle, found by name with `graph(name)` or in order in
+`graphs`. The monitor's own `hidden`, `disabled` and `dispose()` act on all of its graphs at once.
+
+<Code
+  code={`monitor.graph('memory')!.hidden = true;
+monitor.disabled = true;`}
+  language="ts"
+/>
+
+### Cost
+
+The monitor samples only while it is visible, unless `sampleWhileHidden` is set. Per frame it does a
+few arithmetic operations on numbers; once per window it reads each metric and records one frame
+into the plot, which paints incrementally. `begin()` and `end()` are always cheap, whether or not
+the monitor is visible.

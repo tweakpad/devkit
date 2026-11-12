@@ -27,115 +27,22 @@ camera.addBinding(params, 'tint', { color: { type: 'float' } }); // {r,g,b} in 0
 tabs.pages[1].addPerformanceMonitor(); // FPS and frame time, memory below
 ```
 
-## Controls
+## Documentation
 
-The control is inferred from the value; `view` overrides the inference.
+Each feature has a page under `docs/<section>/`, written in the same format as the
+`@tweakpad/ui` pages: a live example, then one section per feature, then the API Reference
+generated from the package's TypeScript declarations. The pages ship in the package, with
+`@tweakpad/devkit/docs.json`, and render in Storybook (`npm run storybook`).
 
-| Value                          | Control                                                 |
-| ------------------------------ | ------------------------------------------------------- |
-| number with `min` and `max`    | `tp-slider` inline                                      |
-| number                         | `tp-input type=number` inline (stepper)                 |
-| boolean                        | `tp-checkbox` inline (`view: 'switch'` for `tp-switch`) |
-| any value with `options`       | `tp-select` inline, non-modal                           |
-| CSS color string, or `{r,g,b}` | `tp-color-input` inline                                 |
-| string                         | `tp-input` inline                                       |
+| Section    | Pages                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pane       | [Pane](docs/pane/pane.mdx), [Vertical tabs](docs/pane/vertical-tabs.mdx)                                                                         |
+| Controls   | [Bindings](docs/controls/bindings.mdx), [Buttons](docs/controls/buttons.mdx), [Colors](docs/controls/colors.mdx), [Rows](docs/controls/rows.mdx) |
+| Monitoring | [Monitors](docs/monitoring/monitors.mdx), [Graphs](docs/monitoring/graphs.mdx), [Performance monitor](docs/monitoring/performance.mdx)           |
+| History    | [Version history](docs/history/version-history.mdx)                                                                                              |
 
-Monitoring uses ordinary bindings with `view: 'monitor'`. The default text view and optional
-`monitor: { view: 'graph' }` numeric history use the same binding API, row composition,
-visibility and disposal contract as editors. See [monitor bindings](docs/api/monitoring.md).
-
-## Graphs and performance
-
-Three levels, from general to ready-made:
-
-1. **`addGraph`** plots any live numbers: one or more series, sampled through `read()` or fed
-   with `push()`, paged (click to cycle) or overlaid in one plot, with guides and header
-   markers. See [graphs](docs/api/graphs.md).
-2. **`addPerformanceMonitor`** stacks a frame graph (FPS, frame time) over a memory graph (JS
-   heap), measured by devkit or around your own loop with `begin()` and `end()`. See
-   [performance monitor](docs/api/performance.md).
-3. **Adapters** plug framework-specific metrics and markers into that monitor (draw calls, GPU
-   memory, triangle counts, a `WebGPU`/`WebGL` marker) without devkit depending on any framework.
-   Each metric names its graph, and `graphs` regroups them.
-
-```ts
-const monitor = pane.addPerformanceMonitor({
-  adapters: [
-    {
-      name: 'three',
-      markers: [
-        { id: 'backend', read: () => (renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL') },
-      ],
-      metrics: [
-        {
-          id: 'drawCalls',
-          label: 'Draw calls',
-          unit: 'calls',
-          precision: 0,
-          graph: 'frame',
-          read: () => renderer.info.render.calls,
-        },
-      ],
-    },
-  ],
-});
-```
-
-All graphs are drawn by `<tp-plot>` and stay on its incremental painting path: each series is
-normalized to its own range (fitted to the visible data, refitted only when it no longer
-suits), stable configuration objects, one shared paint scheduler per pane, and sampling only
-while visible.
-
-Color bindings accept `color: { picker: 'native' | 'tweakpad' }`. Set
-`new Pane({ colorPicker: 'tweakpad' })` to change the pane default; individual bindings can
-override it. Native is the default. See [color picker configuration](docs/api/colors.md)
-for formats, alpha, RGB objects and mixed inline rows.
-
-Actions use `addButton({ title, onClick })`. Compose any supported controls with `addRow`:
-
-```ts
-const actions = pane.addFolder({ title: 'Actions' });
-actions.addButton({
-  title: 'Reset scene',
-  onClick: () => {
-    params.speed = 0.6;
-    params.paused = false;
-  },
-});
-actions.addRow({
-  name: 'playback',
-  items: [
-    {
-      type: 'button',
-      title: 'Pause',
-      onClick: () => {
-        params.paused = true;
-      },
-    },
-    {
-      type: 'button',
-      title: 'Resume',
-      onClick: () => {
-        params.paused = false;
-      },
-    },
-  ],
-});
-```
-
-Rows are supported on panes, folders and tab pages. The same declaration can mix a slider
-with an intrinsic-width Reset button, inputs, monitors or other bindings. Each row shares one
-complete search boundary. See the [inline row API](docs/api/rows.md) and
-[button API](docs/api/buttons.md) for configuration, typed item handles, state and disposal.
-
-## Version history
-
-`new Pane({ history: true })` keeps the control values in versions, in `localStorage` or in memory.
-Every finished edit goes to the working version's log. `history.advance()` freezes the working
-version, or `mode: 'auto'` does it on each reload that follows real edits, never making identical
-duplicates. Stored values are applied best effort when the controls change: what still fits is
-restored, and renamed or retyped controls keep their code values. See
-[version history](docs/api/history.md).
+Storybook also has full-screen showcases: an orbit study tuned live, vertical tabs, graphs and
+the performance monitor, nested grouping, and a 1000-binding stress test.
 
 ## Architecture
 
@@ -175,7 +82,7 @@ src/api/       the public imperative API, rows, chunks, visibility, mount LRU
 
 ## Measurements (2026-10-31, Vite dev, Lit dev mode, M-series Mac, 60 Hz)
 
-`demo/stress.html` has 1000 bindings in 20 folders across 2 tabs. The app mutates 30 values
+The Stress showcase in Storybook has 1000 bindings in 20 folders across 2 tabs. The app mutates 30 values
 per frame. "Work" is main-thread time per frame, measured from the rAF timestamp to the first
 task after rendering.
 
@@ -198,8 +105,9 @@ reproducible with `demo/library-proof.html` (run Vite with `NODE_ENV=production`
 
 ```sh
 npm install        # installs the published @tweakpad/ui dependency
-npm run dev        # playground at /, stress at /demo/stress.html, spike at /demo/spike-library.html
+npm run storybook  # showcases and documentation pages at http://localhost:6007
+npm run dev        # browser checks and the library cost spike, linked from /
 NODE_ENV=production npx vite   # production Lit, for /demo/library-proof.html
-npm test           # core unit tests
+npm test           # unit tests, and the documentation pages' structure and API Reference
 npm run lint && npm run typecheck && npm run build
 ```

@@ -1,0 +1,228 @@
+import React, { Fragment } from 'react';
+import {
+  Canvas,
+  Description,
+  Markdown,
+  PureArgsTable,
+  Source,
+  Title,
+  useOf,
+} from '@storybook/addon-docs/blocks';
+import { MDXProvider } from '@storybook/addon-docs/mdx-react-shim';
+import docsIndex from '../dist/docs.json';
+import { DocsTable } from './docs-table.js';
+import { mountPreview, previewSource } from '../scripts/docs/preview-runtime.mjs';
+import { releasePanes } from '../stories/runtime.js';
+
+export const DevkitDocContext = React.createContext(null);
+
+export function PreviewCanvas({ preview }) {
+  // A devkit documentation page on its Docs page, rendered with Storybook's own blocks: the
+  // header, the main use case (the Default story), the page's Usage (`DevkitDoc`), then the
+  // generated API Reference. `Preview`, `Code` and `Keys` are the elements the pages use, as in
+  // @tweakpad/ui's pages; the website renders the same pages with its own components. Top-level
+  // comments are prose to MDX, so the notes live inside the blocks.
+  const host = React.useRef(null);
+  React.useEffect(() => {
+    const mounted = mountPreview(host.current, preview, releasePanes);
+    return () => mounted.dispose();
+  }, [preview]);
+  return (
+    <div
+      className="devkit-docs-preview"
+      data-align={preview.align || 'center'}
+      data-devkit-preview=""
+      ref={host}
+    />
+  );
+}
+
+export function Preview(props) {
+  const context = React.useContext(DevkitDocContext);
+  const preview = React.useMemo(() => props, [props.code, props.script, props.align]);
+  const components = React.useMemo(
+    () => ({ Story: () => <PreviewCanvas preview={preview} /> }),
+    [preview],
+  );
+  // The hero is the Default story above; the page's first preview is not shown twice.
+  const hero = context?.hero;
+  if (hero && hero.title === props.title && hero.code === props.code) return null;
+  const source = {
+    code: previewSource(props.code, props.script),
+    language: props.language || 'html',
+    format: false,
+  };
+  // The section heading names a lone preview; a caption tells apart several in one section.
+  const parsed = context?.previews.find(
+    (candidate) => candidate.code === props.code && candidate.title === props.title,
+  );
+  const siblings = parsed
+    ? context.previews.filter((candidate) => candidate.afterHeading === parsed.afterHeading).length
+    : 1;
+  const captioned = Boolean(props.title) && siblings > 1;
+  return (
+    <figure className="devkit-docs-example">
+      {captioned && <figcaption>{props.title}</figcaption>}
+      {props.codeOnly ? (
+        <Canvas withToolbar={false} source={source} sourceState="shown" />
+      ) : (
+        <MDXProvider components={components}>
+          <Canvas layout="padded" withToolbar={false} source={source} />
+        </MDXProvider>
+      )}
+    </figure>
+  );
+}
+
+export function Code({ code, language, label }) {
+  // A standalone sample with nothing to render: Storybook's Source block, under its label.
+  return (
+    <figure className="devkit-docs-example">
+      {label && <figcaption>{label}</figcaption>}
+      <Source code={code.trim()} language={language || 'ts'} format={false} dark />
+    </figure>
+  );
+}
+
+export const KEY_ALIASES = {
+  up: 'arrowup',
+  down: 'arrowdown',
+  left: 'arrowleft',
+  right: 'arrowright',
+  esc: 'escape',
+};
+
+export function Keys({ keys }) {
+  const names = keys
+    .split('+')
+    .map((key) => key.trim())
+    .filter(Boolean)
+    .map((key) => KEY_ALIASES[key.toLowerCase()] ?? (key.length === 1 ? key.toUpperCase() : key));
+  return (
+    <tp-kbd-group>
+      {names.map((name, index) => (
+        <tp-kbd key={index} value={name} />
+      ))}
+    </tp-kbd-group>
+  );
+}
+
+export function useDevkitDoc() {
+  const resolved = useOf('meta', ['meta']);
+  return resolved.preparedMeta.parameters.docs?.devkit ?? null;
+}
+
+export function PageHeader() {
+  // Name, description and entry point, from the page's frontmatter. A story file without a page
+  // (a showcase) keeps Storybook's own title and description.
+  const doc = useDevkitDoc();
+  if (!doc)
+    return (
+      <>
+        <Title />
+        <Description />
+      </>
+    );
+  const { page } = doc;
+  return (
+    <>
+      <Title>{page.title}</Title>
+      <Description />
+      <p className="devkit-docs-symbol">
+        <code>{page.symbol}</code>
+      </p>
+    </>
+  );
+}
+
+export function DevkitDoc() {
+  // A page's body with the documentation elements; the hero is skipped (the Default story shows it).
+  const doc = useDevkitDoc();
+  if (!doc) return null;
+  const { page, Content } = doc;
+  const components = { Preview, Code, Keys, table: DocsTable };
+  // MDX resolves member-expression elements through its provider, so the context provider is
+  // created directly.
+  return React.createElement(
+    DevkitDocContext.Provider,
+    { value: { hero: page.hero, previews: page.previews } },
+    <MDXProvider components={components}>
+      <Content components={components} />
+    </MDXProvider>,
+  );
+}
+
+export function ApiRows({ label, id, level, rows }) {
+  // One group of API rows in Storybook's own args table, read-only: no args, so no Control column.
+  // Descriptions are Markdown, so code spans render.
+  if (!rows.length) return null;
+  const Heading = level;
+  const argTypes = Object.fromEntries(
+    rows.map((row) => [
+      row.name,
+      {
+        name: row.name,
+        description: [row.description, row.readonly && 'Read-only.'].filter(Boolean).join('\n\n'),
+        type: { required: row.optional === false },
+        table: {
+          ...(row.type ? { type: { summary: row.type } } : {}),
+          ...(row.default ? { defaultValue: { summary: row.default } } : {}),
+        },
+      },
+    ]),
+  );
+  return (
+    <>
+      <Heading id={id}>{label}</Heading>
+      <PureArgsTable rows={argTypes} sort="none" />
+    </>
+  );
+}
+
+export function DeclarationApi({ name, level }) {
+  // Options, Properties, Events and Methods, each only when the declaration has rows for it; a
+  // type alias shows its definition.
+  const entry = docsIndex.api[name];
+  if (!entry)
+    return (
+      <p>
+        No API entry for <code>{name}</code>. Run <code>npm run docs:build</code>.
+      </p>
+    );
+  const group = (label) => ({
+    label,
+    id: `api-${name.toLowerCase()}-${label.toLowerCase()}`,
+    level,
+  });
+  return (
+    <>
+      <ApiRows {...group('Options')} rows={entry.options} />
+      <ApiRows {...group('Properties')} rows={entry.properties} />
+      <ApiRows {...group('Events')} rows={entry.events} />
+      <ApiRows {...group('Methods')} rows={entry.methods} />
+      <ApiRows {...group('Type')} rows={entry.type} />
+    </>
+  );
+}
+
+export function Api() {
+  const doc = useDevkitDoc();
+  if (!doc) return null;
+  const { page } = doc;
+  return (
+    <>
+      <h2 id="api-reference">API Reference</h2>
+      {page.api.map((name) => (
+        <Fragment key={name}>
+          <h3 id={`api-${name.toLowerCase()}`}>
+            <code>{name}</code>
+          </h3>
+          {docsIndex.api[name]?.description ? (
+            <Markdown>{docsIndex.api[name].description}</Markdown>
+          ) : null}
+          <DeclarationApi name={name} level="h4" />
+        </Fragment>
+      ))}
+    </>
+  );
+}

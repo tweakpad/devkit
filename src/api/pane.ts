@@ -7,30 +7,61 @@ import type { ColorPickerMode } from '../controls/color.js';
 import type { HistoryOptions } from '../history/types.js';
 import { createHistory, HistoryApi } from './history.js';
 
+/** Options of `new Pane()`. Every option is optional. */
 export interface PaneOptions {
-  /** Default color picker for all bindings, including inline rows. Default 'native'. */
+  /**
+   * Color picker that color bindings open, including those in inline rows. A binding's
+   * `color.picker` overrides it.
+   * @default 'native'
+   */
   colorPicker?: ColorPickerMode;
+  /** Text in the title bar. Also names the pane's stored history unless `history.key` is set. */
   title?: string;
-  /** Where the pane goes. Omitted: a floating pane on the document body. */
+  /**
+   * Element the pane is appended to. Omitted, the pane floats over the document body.
+   * @default document.body
+   */
   container?: HTMLElement;
-  /** Floating panes sit fixed over the page; set false to flow inside `container`. */
+  /**
+   * Whether the pane sits fixed over the page instead of flowing inside `container`. A pane
+   * floats unless it is given a `container`.
+   */
   floating?: boolean;
+  /**
+   * Corner of the viewport a floating pane sits in. It also decides which side vertical tabs
+   * take when their `side` is `'auto'`.
+   * @default 'top-right'
+   */
   anchor?: PaneAnchor;
+  /**
+   * Whether the pane starts open; false collapses it to its title bar.
+   * @default true
+   */
   expanded?: boolean;
-  /** Floating panes can be dragged by their title bar. Default true. */
+  /**
+   * Whether a floating pane can be dragged by its title bar.
+   * @default true
+   */
   movable?: boolean;
   /**
-   * How input bindings follow their objects: `'frame'` checks every frame (default), a number
-   * checks every that many ms, `'manual'` only on `refresh()`.
+   * How bindings follow their objects: `'frame'` checks every frame, a number checks every that
+   * many milliseconds, and `'manual'` only on `refresh()`. A binding's own `interval` overrides it.
+   * @default 'frame'
    */
   refresh?: 'frame' | 'manual' | number;
-  /** Library controls kept mounted while off screen before the least recent ones go. Default 300. */
+  /**
+   * Library controls kept mounted while off screen. Beyond it, the least recently seen are
+   * unmounted first and remount when they come back into view.
+   * @default 300
+   */
   maxMounted?: number;
-  /** A scheduler of its own (e.g. a separate frame budget); by default all panes share one. */
+  /** A scheduler of its own, e.g. for a separate frame budget. Omitted, all panes share one. */
   scheduler?: Scheduler;
   /**
-   * Keeps versions of the control values. `true`: in `localStorage` under the pane title, one
-   * working version until `history.advance()`. Off by default, and then costs nothing.
+   * Keeps versions of the control values. `true` stores them in `localStorage` under the pane
+   * title, in one working version until `history.advance()`; an object sets the options. Off,
+   * it costs nothing.
+   * @default false
    */
   history?: boolean | HistoryOptions;
 }
@@ -47,10 +78,14 @@ export interface PaneOptions {
  */
 export class Pane extends ContainerApi {
   protected override readonly supportsVerticalTabs = true;
+  /** The pane's `<tweak-pane>` element. */
   readonly element: TweakPane;
   /** Versions of the control values; null unless the `history` option is set. */
   readonly history: HistoryApi | null;
 
+  /**
+   * Creates a pane and appends it to `container`, or to the document body as a floating pane.
+   */
   constructor(options: PaneOptions = {}) {
     registerElements();
     const refresh = options.refresh ?? 'frame';
@@ -82,6 +117,7 @@ export class Pane extends ContainerApi {
     (options.container ?? document.body).append(element);
   }
 
+  /** Text in the title bar. */
   get title(): string {
     return this.element.heading;
   }
@@ -90,6 +126,7 @@ export class Pane extends ContainerApi {
     this.element.heading = title;
   }
 
+  /** Whether the pane is open; false collapses it to its title bar. */
   get expanded(): boolean {
     return this.element.expanded;
   }
@@ -98,16 +135,17 @@ export class Pane extends ContainerApi {
     this.element.expanded = expanded;
   }
 
-  /** Re-reads every binding of this pane now. */
+  /** Re-reads every binding of this pane now, e.g. after a change with `refresh: 'manual'`. */
   refresh(): void {
     for (const binding of this.context.bindings) binding.refresh();
   }
 
-  /** Counters of the last frame of this pane's scheduler. */
+  /** Counters of the last frame of this pane's scheduler, and how many controls are mounted. */
   get stats(): Readonly<FrameStats> & { mounted: number } {
     return { ...this.context.scheduler.stats, mounted: this.context.mountedCount };
   }
 
+  /** Removes the pane and everything in it, stops its work, and saves and closes its history. */
   override dispose(): void {
     this.element.removeEventListener('tweak-search', this.#onSearch);
     this.context.refreshSearch = undefined;

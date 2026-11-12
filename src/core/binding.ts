@@ -14,12 +14,18 @@ export interface BindingView<T> {
   write(value: T): void;
 }
 
+/** What `change` and `finish` listeners of a binding receive. */
 export interface ChangeEvent<T> {
+  /** The binding's value. */
   value: T;
-  /** True for the final change of an interaction (release, Enter, blur). */
+  /**
+   * True for the final change of an interaction (release, Enter, blur) and for a value set from
+   * code: the changes `finish` listeners receive.
+   */
   last: boolean;
 }
 
+/** A listener of a binding's `change` or `finish` event. */
 export type ChangeListener<T> = (event: ChangeEvent<T>) => void;
 
 export interface BindingOptions<T> {
