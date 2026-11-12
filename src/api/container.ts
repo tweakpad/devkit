@@ -50,7 +50,6 @@ export type TabsParams = { selected?: number } & (
   | {
       orientation: 'vertical';
       side?: 'auto' | 'left' | 'right';
-      placement?: 'inside' | 'outside';
       pages: (TabPageParams & { icon: IconDefinition })[];
     }
 );
@@ -228,7 +227,6 @@ export class ContainerApi {
     const element = document.createElement(TweakTabs.tagName) as TweakTabs;
     element.orientation = params.orientation ?? 'horizontal';
     element.side = vertical ? (params.side ?? 'auto') : 'auto';
-    element.placement = vertical ? (params.placement ?? 'outside') : 'outside';
     element.pageOptions = params.pages;
     element.labels = params.pages.map((page) => page.title);
     element.selected = params.selected ?? 0;

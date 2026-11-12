@@ -42,11 +42,3 @@ lower.pages[1]!.addBinding(state, 'size', { min: 1, max: 24 });
 document.getElementById('flip')!.addEventListener('click', () => {
   pane.element.anchor = pane.element.anchor === 'top-right' ? 'top-left' : 'top-right';
 });
-
-document.getElementById('placement')!.addEventListener('click', (event) => {
-  const placement = scene.element.placement === 'outside' ? 'inside' : 'outside';
-  scene.element.placement = placement;
-  lower.element.placement = placement;
-  (event.currentTarget as HTMLButtonElement).textContent =
-    placement === 'outside' ? 'Try inside tabs' : 'Try outside tabs';
-});

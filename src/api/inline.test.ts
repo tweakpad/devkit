@@ -44,7 +44,6 @@ export function declareVerticalTabs(pane: Pane) {
   const vertical = pane.addTabs({
     orientation: 'vertical',
     side: 'right',
-    placement: 'inside',
     pages: [{ title: 'Scene', icon, color: 'var(--tp-primary)', hint: 'Scene settings' }],
   });
   vertical.pages[0]!.addTabs({ pages: [{ title: 'Motion' }] });

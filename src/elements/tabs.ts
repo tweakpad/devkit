@@ -2,20 +2,6 @@ import { css, html, nothing, LitElement, type PropertyValues, type TemplateResul
 import type { TpTabs, TpTooltip, IconDefinition, TpValueChangeEvent } from '@tweakpad/ui';
 import { containerStyles } from './styles.js';
 
-// Outside columns belong to the pane's scrollable area, rather than escaping it.
-const paneColumns = new WeakMap<HTMLElement, Map<TweakTabs, { left: number; right: number }>>();
-function updateGutters(pane: HTMLElement): void {
-  const columns = [...(paneColumns.get(pane)?.values() ?? [])];
-  pane.style.setProperty(
-    '--tweak-tabs-outside-left',
-    `${Math.max(0, ...columns.map((c) => c.left))}px`,
-  );
-  pane.style.setProperty(
-    '--tweak-tabs-outside-right',
-    `${Math.max(0, ...columns.map((c) => c.right))}px`,
-  );
-}
-
 /** One page of a tweak-tabs. Hidden pages are out of rendering, so their bindings sleep. */
 export class TweakTabPage extends LitElement {
   static readonly tagName = 'tweak-tab-page';
@@ -58,7 +44,6 @@ export class TweakTabs extends LitElement {
     selected: { type: Number },
     orientation: { reflect: true },
     side: {},
-    placement: { reflect: true },
     pageOptions: { attribute: false },
   };
 
@@ -142,10 +127,8 @@ export class TweakTabs extends LitElement {
 
   orientation: 'horizontal' | 'vertical' = 'horizontal';
   side: 'auto' | 'left' | 'right' = 'auto';
-  placement: 'inside' | 'outside' = 'outside';
   pageOptions: { icon?: IconDefinition; color?: string; hint?: string }[] = [];
   #frame = 0;
-  #pane: HTMLElement | undefined;
   #onScroll = (): void => {
     this.shadowRoot?.querySelectorAll<TpTooltip>('tp-tooltip').forEach((tip) => tip.close());
   };
@@ -171,10 +154,6 @@ export class TweakTabs extends LitElement {
     this.#resize?.disconnect();
     this.#resize = undefined;
     this.#scroll?.removeEventListener('scroll', this.#onScroll);
-    if (this.#pane) {
-      paneColumns.get(this.#pane)?.delete(this);
-      updateGutters(this.#pane);
-    }
     window.removeEventListener('resize', this.#schedule);
     this.#tooltipReleases.splice(0).forEach((release) => release());
     this.#geometry = '';
@@ -205,7 +184,6 @@ export class TweakTabs extends LitElement {
       const right =
         this.side === 'right' ||
         (this.side === 'auto' && pane.getAttribute('anchor')?.endsWith('left'));
-      const p = pane.getBoundingClientRect();
       const group = this.getBoundingClientRect();
       const listStyle = getComputedStyle(list);
       const width =
@@ -225,35 +203,24 @@ export class TweakTabs extends LitElement {
         radius,
         right,
         this.selected,
+        group.width,
         group.height,
-        this.placement,
-        p.width,
         width,
         height,
         visible,
-        group.left - p.left,
-        group.right - p.left,
       ].join(',');
       if (geometry !== this.#geometry) {
         this.#geometry = geometry;
         Object.assign(list.style, {
           position: 'absolute',
           top: '0',
-          left: `${this.placement === 'outside' ? (right ? p.right - group.left : p.left - group.left - width) : right ? group.width - width : 0}px`,
+          left: `${right ? group.width - width : 0}px`,
           width: `${width}px`,
           maxWidth: 'none',
           zIndex: '2',
           visibility: visible ? 'visible' : 'hidden',
         });
-        this.#pane = pane;
-        if (!paneColumns.has(pane)) paneColumns.set(pane, new Map());
-        paneColumns.get(pane)!.set(this, {
-          left: this.placement === 'outside' && !right ? width : 0,
-          right: this.placement === 'outside' && right ? width : 0,
-        });
-        updateGutters(pane);
         this.style.minHeight = `${height}px`;
-        const inside = this.placement === 'inside';
         this.style.setProperty('--rail-height', `${height}px`);
         const selectedRect = buttons[this.selected]?.getBoundingClientRect();
         this.style.setProperty(
@@ -262,14 +229,8 @@ export class TweakTabs extends LitElement {
             ? '0 var(--tp-radius-lg) var(--tp-radius-lg) 0'
             : 'var(--tp-radius-lg) 0 0 var(--tp-radius-lg)',
         );
-        this.style.setProperty(
-          '--rail-inset-left',
-          `${!right ? (inside ? width : p.left - group.left) : 0}px`,
-        );
-        this.style.setProperty(
-          '--rail-inset-right',
-          `${right ? (inside ? width : group.right - p.right) : 0}px`,
-        );
+        this.style.setProperty('--rail-inset-left', `${right ? 0 : width}px`);
+        this.style.setProperty('--rail-inset-right', `${right ? width : 0}px`);
         const surface = this.shadowRoot!.querySelector<HTMLElement>('.page-frame:not([hidden])')!;
         const topRadius = this.selected === 0 ? '0' : 'var(--tp-radius-lg)';
         const bottomRadius =
@@ -315,7 +276,7 @@ export class TweakTabs extends LitElement {
           .querySelector('path')!
           .setAttribute('transform', right ? `translate(${outlineWidth} 0) scale(-1 1)` : '');
         Object.assign(outline.style, {
-          left: `${right ? surfaceRect.left - group.left : inside ? 0 : p.left - group.left - width}px`,
+          left: `${right ? surfaceRect.left - group.left : 0}px`,
           top: '0',
           width: `${outlineWidth}px`,
           height: `${h}px`,

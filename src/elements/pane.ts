@@ -239,19 +239,9 @@ export class TweakPane extends LitElement {
       .scroll {
         min-block-size: 0;
 
-        /* One scroll viewport contains the controls and outside tab columns. */
-        margin-inline: calc(
-            -1 *
-              (var(--tp-space-1-5) + var(--tp-border-width) + var(--tweak-tabs-outside-left, 0px))
-          )
-          calc(
-            -1 *
-              (var(--tp-space-1-5) + var(--tp-border-width) + var(--tweak-tabs-outside-right, 0px))
-          );
-        padding-inline: calc(
-            var(--tp-space-1-5) + var(--tp-border-width) + var(--tweak-tabs-outside-left, 0px)
-          )
-          calc(var(--tp-space-1-5) + var(--tp-border-width) + var(--tweak-tabs-outside-right, 0px));
+        /* The scroll viewport reaches the pane's edges, so its scrollbar sits on the border. */
+        margin-inline: calc(-1 * (var(--tp-space-1-5) + var(--tp-border-width)));
+        padding-inline: calc(var(--tp-space-1-5) + var(--tp-border-width));
         margin-block: var(--tp-space-1-5) calc(-1 * (var(--tp-space-1-5) + var(--tp-border-width)));
         padding-block: var(--tp-space-1-5) var(--tp-radius-lg);
         border-block-start: var(--tp-border-width) var(--tp-border-style) var(--tp-hairline);
@@ -260,13 +250,9 @@ export class TweakPane extends LitElement {
           from 0 0,
           hline to 100%,
           vline to calc(100% - var(--tp-radius-lg)),
-          hline to calc(100% - var(--tweak-tabs-outside-right, 0px)),
-          arc to calc(100% - var(--tweak-tabs-outside-right, 0px) - var(--tp-radius-lg)) 100% of
-            var(--tp-radius-lg) cw,
-          hline to calc(var(--tweak-tabs-outside-left, 0px) + var(--tp-radius-lg)),
-          arc to calc(var(--tweak-tabs-outside-left, 0px)) calc(100% - var(--tp-radius-lg)) of
-            var(--tp-radius-lg) cw,
-          hline to 0,
+          arc to calc(100% - var(--tp-radius-lg)) 100% of var(--tp-radius-lg) cw,
+          hline to var(--tp-radius-lg),
+          arc to 0 calc(100% - var(--tp-radius-lg)) of var(--tp-radius-lg) cw,
           close
         );
         overscroll-behavior: none contain;
