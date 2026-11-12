@@ -347,7 +347,7 @@ export class TweakTabs extends LitElement {
     return html`<tp-tabs
         .orientation=${this.orientation}
         .value=${String(this.selected)}
-        ?full-width=${this.orientation !== 'vertical'}
+        full-width
         .partPresentation=${{
           // The vertical icon rail.
           'tabs-list': {
