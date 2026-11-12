@@ -32,6 +32,12 @@ export interface ControlView<T> extends BindingView<T> {
  */
 export abstract class LibraryView<T> implements ControlView<T> {
   readonly heavy = true;
+  /**
+   * Whether every accepted proposal is a finished edit. A toggle or a pick has no drag or typing
+   * in between, and the library's checkbox, switch and select announce no commit of their own, so
+   * their views commit with each change.
+   */
+  protected readonly discrete: boolean = false;
   protected el: LibraryElement | null = null;
   #releaseLock: (() => void) | null = null;
 
@@ -122,7 +128,9 @@ export abstract class LibraryView<T> implements ControlView<T> {
     }
     this.echo(el, proposal);
     const value = this.parse(proposal);
-    if (value !== undefined) this.binding.propose(value);
+    if (value === undefined) return;
+    this.binding.propose(value);
+    if (this.discrete) this.binding.commit();
   };
 
   #onCommit = (event: Event): void => {

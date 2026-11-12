@@ -21,16 +21,16 @@ export function stress(_host: HTMLElement, { anchor }: StressArgs): () => void {
   type Value = number | boolean | string;
   const state: Record<string, Value> = {};
   const keys: string[] = [];
-  const kinds: ('slider' | 'number' | 'checkbox' | 'select' | 'color')[] = [];
+  const kinds: ('slider' | 'number' | 'boolean' | 'select' | 'color')[] = [];
   for (let i = 0; i < TOTAL; i++) {
     const key = `p${i}`;
     keys.push(key);
     const r = i % 10;
     const kind =
-      r < 6 ? 'slider' : r === 6 ? 'number' : r === 7 ? 'checkbox' : r === 8 ? 'select' : 'color';
+      r < 6 ? 'slider' : r === 6 ? 'number' : r === 7 ? 'boolean' : r === 8 ? 'select' : 'color';
     kinds.push(kind);
     state[key] =
-      kind === 'checkbox' ? false : kind === 'select' ? 'linear' : kind === 'color' ? '#336699' : 0;
+      kind === 'boolean' ? false : kind === 'select' ? 'linear' : kind === 'color' ? '#336699' : 0;
   }
 
   const pane = new Pane({ title: 'Stress', anchor });
@@ -50,7 +50,7 @@ export function stress(_host: HTMLElement, { anchor }: StressArgs): () => void {
       case 'number':
         folder.addBinding(state, key, { label: `Number ${i}`, step: 0.01 });
         break;
-      case 'checkbox':
+      case 'boolean':
         folder.addBinding(state, key, { label: `Flag ${i}` });
         break;
       case 'select':
@@ -108,7 +108,7 @@ export function stress(_host: HTMLElement, { anchor }: StressArgs): () => void {
     label: 'Deferred writes',
     precision: 0,
   });
-  monitor.addBinding(run, 'mutate', { label: 'App mutation', view: 'switch' });
+  monitor.addBinding(run, 'mutate', { label: 'App mutation' });
   monitor.addRow({
     name: 'folders',
     label: 'Folders',
@@ -164,7 +164,7 @@ export function stress(_host: HTMLElement, { anchor }: StressArgs): () => void {
           case 'number':
             state[key] = Math.round(1000 * Math.cos(now / 700 + i)) / 100;
             break;
-          case 'checkbox':
+          case 'boolean':
             state[key] = Math.sin(now / 300 + i) > 0;
             break;
           case 'select':

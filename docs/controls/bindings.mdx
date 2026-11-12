@@ -53,17 +53,20 @@ pane.addBinding(particles, 'seed', { step: 1 });`}
 
 ### Booleans
 
-A boolean becomes a checkbox. `view: 'switch'` shows a switch instead, which reads better for a
-setting that takes effect at once, such as turning a system on or off.
+A boolean becomes a switch, which reads as a setting that takes effect at once, such as turning a
+system on or off. `view: 'checkbox'` shows a checkbox instead, for a choice among several that
+belong together.
 
 <Preview
   title="Booleans"
   code={`<div id="bindings-booleans"></div>`}
   script={`import { Pane } from '@tweakpad/devkit';
-const audio = { muted: false, reverb: true };
+const audio = { muted: false, music: true, effects: true };
 const pane = new Pane({ container: document.getElementById('bindings-booleans'), title: 'Audio' });
 pane.addBinding(audio, 'muted');
-pane.addBinding(audio, 'reverb', { view: 'switch' });`}
+const channels = pane.addFolder({ title: 'Channels' });
+channels.addBinding(audio, 'music', { view: 'checkbox' });
+channels.addBinding(audio, 'effects', { view: 'checkbox' });`}
 />
 
 ### Choices

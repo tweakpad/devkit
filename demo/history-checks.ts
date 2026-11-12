@@ -131,6 +131,67 @@ export async function checkHistory(): Promise<string[]> {
     );
     second.dispose();
 
+    // Toggles and picks: each change is a finished edit, so history records it.
+    const discreteHost = document.createElement('div');
+    document.body.append(discreteHost);
+    const discrete = new Pane({
+      container: discreteHost,
+      title: 'Discrete',
+      history: { key: `${key}-discrete`, storage: 'memory' },
+    });
+    panes.push(discrete);
+    const flags = { on: false, box: false, mode: 'a' };
+    const finished: string[] = [];
+    discrete.addBinding(flags, 'on').on('finish', () => finished.push('on'));
+    discrete
+      .addBinding(flags, 'box', { view: 'checkbox' })
+      .on('finish', () => finished.push('box'));
+    discrete
+      .addBinding(flags, 'mode', { options: ['a', 'b'] })
+      .on('finish', () => finished.push('mode'));
+    await frames(10);
+    const find = (tag: string): HTMLElement => {
+      let found: HTMLElement | null = null;
+      const walk = (root: ParentNode) => {
+        for (const el of root.querySelectorAll<HTMLElement>('*')) {
+          if (el.localName === tag) found ??= el;
+          if (el.shadowRoot) walk(el.shadowRoot);
+        }
+      };
+      walk(discrete.element);
+      if (discrete.element.shadowRoot) walk(discrete.element.shadowRoot);
+      if (!found) throw new Error(`no ${tag} in the pane`);
+      return found;
+    };
+    check(
+      find('tp-switch').localName === 'tp-switch' && find('tp-checkbox') !== null,
+      'a boolean binds to a switch by default and to a checkbox with view: checkbox',
+    );
+    find('tp-switch').click();
+    find('tp-checkbox').click();
+    find('tp-select').dispatchEvent(
+      new CustomEvent('tp-value-change', {
+        detail: { value: 'b' },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await frames(5);
+    check(
+      flags.on && flags.box && flags.mode === 'b' && finished.sort().join() === 'box,mode,on',
+      'a toggle or a pick finishes its edit once',
+    );
+    check(
+      discrete
+        .history!.current.changes.map((change) => `${change.path}:${String(change.to)}`)
+        .sort()
+        .join() === 'box:true,mode:b,on:true',
+      'toggles and picks are recorded in the history',
+    );
+    discrete.dispose();
+    discreteHost.remove();
+
     // Off: no history, no storage access.
     const before = localStorage.length;
     const original = Storage.prototype.getItem;

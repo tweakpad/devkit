@@ -78,14 +78,20 @@ buttons in any order. Each binding item picks its control from the value and opt
   title="Any control"
   code={`<div id="rows-mixed"></div>`}
   script={`import { Pane } from '@tweakpad/devkit';
-const grid = { visible: true, color: '#5b6b8c', cell: 32 };
+const grid = { visible: true, cell: 32, color: '#5b6b8c', dashed: false };
 const pane = new Pane({ container: document.getElementById('rows-mixed'), title: 'Grid' });
 pane.addRow({
-  name: 'grid',
+  name: 'cells',
   items: [
-    { type: 'binding', target: grid, key: 'visible', label: 'Show', view: 'switch' },
-    { type: 'binding', target: grid, key: 'color', label: 'Color' },
+    { type: 'binding', target: grid, key: 'visible', label: 'Show', width: 'auto' },
     { type: 'binding', target: grid, key: 'cell', label: 'Cell', min: 4, max: 128, step: 4 },
+  ],
+});
+pane.addRow({
+  name: 'look',
+  items: [
+    { type: 'binding', target: grid, key: 'color', label: 'Color' },
+    { type: 'binding', target: grid, key: 'dashed', label: 'Dashed', width: 'auto' },
   ],
 });`}
 />
@@ -100,14 +106,20 @@ as Reset next to a control that should keep the space.
   title="Widths"
   code={`<div id="rows-widths"></div>`}
   script={`import { Pane } from '@tweakpad/devkit';
-const brush = { size: 24, hardness: 0.8 };
+const brush = { size: 24 };
 const pane = new Pane({ container: document.getElementById('rows-widths'), title: 'Brush' });
 pane.addRow({
-  name: 'brush',
+  name: 'size',
   items: [
-    { type: 'binding', target: brush, key: 'size', label: 'Size', min: 1, max: 200, width: 2 },
-    { type: 'binding', target: brush, key: 'hardness', label: 'Hardness', width: 1 },
+    { type: 'binding', target: brush, key: 'size', label: 'Size', min: 1, max: 200 },
     { type: 'button', title: 'Reset', width: 'auto', onClick: () => { brush.size = 24; } },
+  ],
+});
+pane.addRow({
+  name: 'selection',
+  items: [
+    { type: 'button', title: 'Clear', width: 1, onClick: () => {} },
+    { type: 'button', title: 'Fill selection', width: 2, onClick: () => {} },
   ],
 });`}
 />

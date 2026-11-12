@@ -135,6 +135,8 @@ export class TextView extends LibraryView<string> {
 
 /** A boolean: tp-checkbox or tp-switch, inline. Their label is slotted text. */
 export class BooleanView extends LibraryView<boolean> {
+  protected override readonly discrete = true;
+
   constructor(
     binding: Binding<boolean>,
     label: string,
@@ -170,6 +172,8 @@ export interface SelectItem {
 
 /** One of a set of values: tp-select, inline and non-modal (a panel must stay usable). */
 export class SelectView extends LibraryView<unknown> {
+  protected override readonly discrete = true;
+
   constructor(
     binding: Binding<unknown>,
     label: string,

@@ -64,7 +64,10 @@ export interface ColorBindingParams {
 export interface BindingParams {
   /** Row label, also matched by search. Defaults to the property key. */
   label?: string;
-  /** Control to use; inferred from the value and the other options when omitted. */
+  /**
+   * Control to use; inferred from the value and the other options when omitted. A boolean gets a
+   * switch, or a checkbox with `'checkbox'`.
+   */
   view?: ControlKind;
   /**
    * Lowest value of a number. With `max`, a number gets a slider; a monitor graph uses it as its
@@ -136,7 +139,7 @@ export function inferKind(value: unknown, params: BindingParams): ControlKind {
     case 'number':
       return params.min !== undefined && params.max !== undefined ? 'slider' : 'number';
     case 'boolean':
-      return 'checkbox';
+      return 'switch';
     case 'string':
       return isColorString(value) ? 'color' : 'text';
     default:

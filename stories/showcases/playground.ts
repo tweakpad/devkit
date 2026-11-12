@@ -43,7 +43,7 @@ export function playground(host: HTMLElement, { anchor }: PlaygroundArgs): () =>
   ];
 
   scene.addBinding(params, 'caption', { label: 'Caption' });
-  scene.addBinding(params, 'paused', { label: 'Paused', view: 'switch' });
+  scene.addBinding(params, 'paused', { label: 'Paused' });
   const actions = scene.addFolder({ title: 'Actions' });
   actions.addButton({
     name: 'reset-scene',
