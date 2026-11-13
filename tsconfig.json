@@ -14,7 +14,10 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowJs": true,
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    // Stories and checks import the package by name; they type-check against the sources, as
+    // Storybook's alias resolves them, so no build is needed first.
+    "paths": { "@tweakpad/devkit": ["./src/index.ts"] }
   },
   "include": [
     "src",
