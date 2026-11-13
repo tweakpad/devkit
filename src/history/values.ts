@@ -1,4 +1,5 @@
 import { isColorString } from '../controls/color.js';
+import { decodeStructure } from '../layers/model.js';
 import type { ControlDescriptor, HistoryDiff, HistoryValue, StoredValue } from './types.js';
 
 const HEX6 = /^#[0-9a-f]{6}$/i;
@@ -22,6 +23,8 @@ export function encode(value: unknown, descriptor: ControlDescriptor): StoredVal
     case 'string':
     case 'color':
       return typeof value === 'string' ? value : undefined;
+    case 'layers':
+      return decodeStructure(value) ? (value as string) : undefined;
     case 'option': {
       const item = descriptor.items.find((candidate) => Object.is(candidate.value, value));
       if (!item) return undefined;
@@ -52,6 +55,8 @@ export function decode(
       return typeof plain === 'boolean' ? { value: plain } : undefined;
     case 'string':
       return typeof plain === 'string' ? { value: plain } : undefined;
+    case 'layers':
+      return decodeStructure(plain) ? { value: plain } : undefined;
     case 'color':
       if (typeof plain !== 'string') return undefined;
       return (descriptor.object ? HEX6.test(plain) : isColorString(plain))

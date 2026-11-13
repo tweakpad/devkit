@@ -60,6 +60,31 @@ const toggle = pane.addButton({
 });`}
 />
 
+### Icons
+
+`icon` shows an icon before the title. With `iconOnly` the button shows only the icon, as a square
+button: the title becomes its accessible name and its tooltip, and search still matches it. In a row,
+icon buttons next to a control take little room.
+
+<Preview
+  title="Icons"
+  code={`<div id="buttons-icons"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { copyIcon } from '@tweakpad/ui/icons/copy';
+import { trashIcon } from '@tweakpad/ui/icons/trash';
+
+const pane = new Pane({ container: document.getElementById('buttons-icons'), title: 'Preset' });
+pane.addButton({ title: 'Duplicate preset', icon: copyIcon, onClick: () => {} });
+const preset = { name: 'Dusk' };
+pane.addRow({
+  name: 'preset',
+  items: [
+    { type: 'binding', target: preset, key: 'name', label: 'Name' },
+    { type: 'button', title: 'Delete preset', icon: trashIcon, iconOnly: true, width: 'auto', onClick: () => {} },
+  ],
+});`}
+/>
+
 ### Search name
 
 Search finds a button by its current title and by its `name`, a stable name that defaults to the

@@ -1,4 +1,4 @@
-import type { TpButton } from '@tweakpad/ui';
+import type { IconDefinition, TpButton, TpTooltip } from '@tweakpad/ui';
 import type { PaneContext } from './context.js';
 import { SearchableRow } from './rows.js';
 import type { SearchMetadata } from '../core/search.js';
@@ -11,6 +11,14 @@ export interface ButtonParams {
   onClick: (event: MouseEvent) => void;
   /** Stable searchable name; defaults to the initial title. */
   name?: string;
+  /** Icon shown before the title, or alone with `iconOnly`. */
+  icon?: IconDefinition;
+  /**
+   * Shows only the icon, as a square button; the title becomes its accessible name and tooltip,
+   * and search still matches it.
+   * @default false
+   */
+  iconOnly?: boolean;
   /**
    * Starts the control disabled: shown dimmed and ignoring input.
    * @default false
@@ -23,23 +31,44 @@ export interface ButtonParams {
   hidden?: boolean;
 }
 
+/** How devkit's own buttons look, beside what `ButtonParams` offers. */
+export interface ButtonLook {
+  variant?: 'secondary' | 'ghost';
+  size?: 'icon-sm' | 'icon';
+}
+
+/** The button, wrapped in a tooltip of its title when it shows only its icon. */
+function buttonSurface(params: ButtonParams, look: ButtonLook): [TpButton, HTMLElement] {
+  const button = document.createElement('tp-button') as TpButton;
+  button.type = 'button';
+  button.variant = look.variant ?? 'secondary';
+  if (params.icon) button.icon = params.icon;
+  if (!params.iconOnly || !params.icon) return [button, button];
+  button.size = look.size ?? 'icon';
+  button.slot = 'trigger';
+  const tooltip = document.createElement('tp-tooltip') as TpTooltip;
+  tooltip.className = 'button-tooltip';
+  tooltip.append(button, document.createElement('span'));
+  return [button, tooltip];
+}
+
 /** One action. Inline composition belongs to the general row API. */
 export class ButtonRow extends SearchableRow {
   readonly metadata: SearchMetadata;
   readonly #button: TpButton;
   readonly #context: PaneContext;
   readonly #onClick: (event: MouseEvent) => void;
+  readonly #iconOnly: boolean;
   #title: string;
 
-  constructor(context: PaneContext, params: ButtonParams) {
-    const button = document.createElement('tp-button') as TpButton;
-    button.type = 'button';
-    button.variant = 'secondary';
-    super(button);
+  constructor(context: PaneContext, params: ButtonParams, look: ButtonLook = {}) {
+    const [button, surface] = buttonSurface(params, look);
+    super(surface);
     this.#button = button;
     this.#context = context;
+    this.#iconOnly = surface !== button;
     this.#title = params.title;
-    button.textContent = params.title;
+    this.#showTitle();
     const currentTitle = () => this.title;
     this.metadata = {
       name: params.name ?? params.title,
@@ -60,8 +89,17 @@ export class ButtonRow extends SearchableRow {
   }
   set title(title: string) {
     this.#title = title;
-    this.#button.textContent = title;
+    this.#showTitle();
     this.#context.refreshSearch?.();
+  }
+
+  #showTitle(): void {
+    if (!this.#iconOnly) {
+      this.#button.textContent = this.#title;
+      return;
+    }
+    this.#button.ariaLabel = this.#title;
+    this.surface.lastElementChild!.textContent = this.#title;
   }
 
   protected override syncVisibility(): void {

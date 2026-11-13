@@ -43,6 +43,24 @@ export {
   type InlineBindingItem,
   type InlineButtonItem,
 } from './api/inline.js';
+export {
+  LayerApi,
+  LayersApi,
+  type LayerEnabledParams,
+  type LayerParams,
+  type LayerStateParams,
+  type LayerTypeParams,
+  type LayersAddItem,
+  type LayersBarItem,
+  type LayersButtonItem,
+  type LayersEvents,
+  type LayersMenuItem,
+  type LayersParams,
+  type LayersRemoveItem,
+  type LayersRules,
+  type LayersSource,
+} from './api/layers.js';
+export type { MenuEntry } from './api/menu.js';
 export { HistoryApi } from './api/history.js';
 export type {
   HistoryChange,
@@ -63,3 +81,4 @@ export { registerElements } from './controls/register.js';
 export { TweakPane, type PaneAnchor } from './elements/pane.js';
 export { TweakFolder } from './elements/folder.js';
 export { TweakTabs, TweakTabPage } from './elements/tabs.js';
+export { TweakLayers, TweakLayerRow, TweakLayerStates } from './elements/layers.js';

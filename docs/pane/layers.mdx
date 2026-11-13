@@ -1,0 +1,269 @@
+---
+title: Layers
+description: A stack of layers the user selects, reorders and toggles, each with its own panel of controls.
+symbol: pane.addLayers(params)
+api: [LayersParams, LayersApi, LayerApi, LayerParams, LayerStateParams, LayerEnabledParams, LayerTypeParams, LayersRules, LayersBarItem, LayersButtonItem, LayersMenuItem, LayersAddItem, LayersRemoveItem, MenuEntry, LayersEvents, LayersSource]
+---
+
+<Preview
+  title="Layers"
+  code={`<div id="layers-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { eyeIcon } from '@tweakpad/ui/icons/eye';
+import { eyeOffIcon } from '@tweakpad/ui/icons/eye-off';
+
+const pane = new Pane({ container: document.getElementById('layers-hero'), title: 'Scene' });
+const light = { intensity: 1.2 };
+const fog = { density: 0.3 };
+pane.addLayers({
+  states: [{ key: 'visible', label: 'Visible', icon: eyeIcon, offIcon: eyeOffIcon, default: true, mutes: true }],
+  layers: [
+    { name: 'Key light', controls: (panel) => panel.addBinding(light, 'intensity', { min: 0, max: 4 }) },
+    { name: 'Fog', controls: (panel) => panel.addBinding(fog, 'density', { min: 0, max: 1 }) },
+    { name: 'Background' },
+  ],
+});`}
+/>
+
+## Usage
+
+`addLayers` adds a stack of layers: an ordered list the user selects from, reorders by dragging and
+toggles, as in an image editor. Each layer can carry a panel of controls, shown below the list while
+the layer is selected, the way a tab page shows its controls. The stack assumes nothing about what a
+layer is: it reports every change through `on()`, and your application decides what the order, the
+states and the selection mean.
+
+The top of the list is index 0. `layers` on the returned stack holds a `LayerApi` per layer, in
+order; `selected`, `add()` and `move()` change the stack from code.
+
+<Code
+  code={`const stack = pane.addLayers({
+  layers: [{ name: 'Key light' }, { name: 'Background' }],
+});
+stack.on('reorder', ({ layer, to }) => scene.moveLayer(layer.data, to));
+stack.on('select', ({ layer }) => editor.select(layer?.data));`}
+  language="ts"
+/>
+
+### States
+
+Every layer has an `enabled` state, on by default; a disabled layer's name shows dimmed. `states`
+adds more, such as visible or locked. A state with an `icon` gets a toggle at the end of each row,
+in declaration order, with `offIcon` while off. A state without one shows nothing in the row, and
+code or a bar action changes it; `enabled` has no icon unless the `enabled` option gives it one.
+`display` shows a toggle only while its state is on or off, keeping its place so the other toggles
+line up, and `mutes` dims the name while the state is off.
+
+<Preview
+  title="States"
+  code={`<div id="layers-states"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { eyeIcon } from '@tweakpad/ui/icons/eye';
+import { eyeOffIcon } from '@tweakpad/ui/icons/eye-off';
+import { lockIcon } from '@tweakpad/ui/icons/lock';
+
+const pane = new Pane({ container: document.getElementById('layers-states'), title: 'Artwork' });
+pane.addLayers({
+  states: [
+    { key: 'locked', label: 'Lock', icon: lockIcon, display: 'on' },
+    { key: 'visible', label: 'Visible', icon: eyeIcon, offIcon: eyeOffIcon, default: true, mutes: true },
+  ],
+  layers: [
+    { name: 'Title', states: { locked: true } },
+    { name: 'Guides', states: { visible: false } },
+    { name: 'Photo' },
+  ],
+});`}
+/>
+
+`layer.states` reads the values and `layer.setState(key, value)` changes them; each change fires
+`state`. In TypeScript, state keys are checked against the stack's `states`.
+
+### Icons
+
+A layer's `icon` shows before its name. When any layer has one, every row keeps room for it, so the
+names always line up.
+
+<Preview
+  title="Icons"
+  code={`<div id="layers-icons"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { imageIcon } from '@tweakpad/ui/icons/image';
+import { folderIcon } from '@tweakpad/ui/icons/folder';
+
+const pane = new Pane({ container: document.getElementById('layers-icons'), title: 'Page' });
+pane.addLayers({
+  layers: [
+    { name: 'Header', icon: folderIcon },
+    { name: 'Caption' },
+    { name: 'Hero image', icon: imageIcon },
+  ],
+});`}
+/>
+
+### Reordering, renaming and removing
+
+`reorder` sets how the user moves layers: by dragging the whole row (the default), only its grip
+(`'handle'`), or not at all (`false`). The grip also moves a row from the keyboard; on whole-row
+stacks it shows while it has keyboard focus. `rename` lets the user rename a layer with a
+double-click or F2, and `remove` lets them remove it with Delete or a `remove` item in a bar. Each
+layer can override all three, for example to keep a background at the bottom.
+
+<Preview
+  title="Reordering, renaming and removing"
+  code={`<div id="layers-editing"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('layers-editing'), title: 'Tracks' });
+pane.addLayers({
+  rename: true,
+  remove: true,
+  layers: [
+    { name: 'Vocals' },
+    { name: 'Drums' },
+    { name: 'Bass' },
+    { name: 'Master', reorder: false, rename: false, remove: false },
+  ],
+  footer: [{ type: 'remove' }],
+});`}
+/>
+
+### Panels
+
+`controls(panel, layer)` builds a layer's panel: add bindings, folders, rows or tabs to `panel` as
+to the pane. It runs once, when the layer is created, and only the selected layer's panel shows;
+the others sleep like hidden tab pages. A layer without `controls` has no panel, so a stack can also
+be a plain ordering list for an editor that shows its own properties.
+
+`data` keeps anything your application needs with a layer, such as the object it stands for, so
+handlers can reach it from `layer.data`.
+
+### Types and adding
+
+`types` declares the kinds of layers the user can add: a title, an icon, default states, the panel's
+`controls` and a `data` function that makes each new layer's data. An `add` item in a bar opens a
+menu of the types, or adds directly when there is only one. A new layer goes above the selected one,
+takes its type's defaults and an id like `sun-1`, and is selected. A type with `menu: false` is left
+out of the menu but can still be declared and added from code.
+
+<Preview
+  title="Types and adding"
+  code={`<div id="layers-types"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const pane = new Pane({ container: document.getElementById('layers-types'), title: 'Lights' });
+pane.addLayers({
+  rename: true,
+  remove: true,
+  types: {
+    point: {
+      title: 'Point light',
+      data: () => ({ range: 10 }),
+      controls: (panel, layer) => panel.addBinding(layer.data, 'range', { min: 0, max: 50 }),
+    },
+    spot: {
+      title: 'Spot light',
+      data: () => ({ angle: 30 }),
+      controls: (panel, layer) => panel.addBinding(layer.data, 'angle', { min: 1, max: 90 }),
+    },
+  },
+  layers: [{ type: 'point', name: 'Fill' }],
+  footer: [{ type: 'add' }, { type: 'remove' }],
+});`}
+/>
+
+`add()` adds a layer from code, of a type or from a full declaration, at any `index`.
+
+### Rules
+
+`allow` holds your rules for the user's actions: whether a type may be added, a layer dropped at an
+index, renamed to a name or removed. They can depend on anything, such as the layers already in the
+stack. Refused types show dimmed in the add menu, a refused drop goes back, and `rename` can return a
+corrected name. The rules apply to the user only: code that calls `add()`, `move()` or `remove()`
+does what it asks.
+
+<Code
+  code={`pane.addLayers({
+  types,
+  allow: {
+    // One kind of layer at a time.
+    add: (type, stack) => stack.layers.every((layer) => layer.type === type),
+    // Nothing goes below the background.
+    move: (layer, to, stack) => to < stack.layers.length - 1,
+    rename: (layer, name) => name.slice(0, 24),
+  },
+  footer: [{ type: 'add' }],
+});`}
+  language="ts"
+/>
+
+### Header and footer
+
+`header` and `footer` are rows above and below the list, for actions on the stack. They take the
+items of a row (bindings and buttons, whose `onClick` also receives the stack), a `menu` of entries,
+and the built-in `add` and `remove` actions. Bindings in a bar can follow the selected layer by
+reading and writing through it.
+
+<Preview
+  title="Header and footer"
+  code={`<div id="layers-bars"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+import { copyIcon } from '@tweakpad/ui/icons/copy';
+
+const pane = new Pane({ container: document.getElementById('layers-bars'), title: 'Effects' });
+let stack;
+const current = {
+  get opacity() { return stack?.selected?.data.opacity ?? 100; },
+  set opacity(value) { if (stack?.selected) stack.selected.data.opacity = value; },
+};
+stack = pane.addLayers({
+  remove: true,
+  types: { blur: { title: 'Blur', data: () => ({ opacity: 100 }) } },
+  layers: [{ type: 'blur', name: 'Soft' }, { type: 'blur', name: 'Strong' }],
+  header: [{ type: 'binding', target: current, key: 'opacity', label: 'Opacity', min: 0, max: 100, step: 1 }],
+  footer: [
+    { type: 'add' },
+    {
+      type: 'button',
+      title: 'Duplicate',
+      icon: copyIcon,
+      iconOnly: true,
+      width: 'auto',
+      onClick: (event, layers) => {
+        const source = layers.selected;
+        if (source) layers.add({ type: 'blur', name: source.name + ' copy', index: source.index, select: true });
+      },
+    },
+    { type: 'remove' },
+  ],
+});`}
+/>
+
+### Events
+
+`on()` reports `select`, `reorder`, `rename`, `state`, `add` and `remove`, each with the layer and a
+`source`: `'user'`, `'api'` for your own calls, or `'restore'` for a history restore. `change` fires
+once after any of them, with the layers in order, for applications that simply rebuild their stack.
+
+### History
+
+With the pane's history on, the stack records its structure (the order, which layers exist, their
+names and states) under its `id` or title, and each panel's controls under the layer's id. A reload
+restores it: declared layers by id, added layers re-created from their type, and layers declared
+since then added in place. Restoring a version brings removed layers back with their panel values,
+and fires the events with `source: 'restore'`. Give declared layers an `id` when their names may
+change in code.
+
+## Keyboard
+
+The selected layer's name is the list's tab stop; each row's toggles and the grip are separate tab
+stops.
+
+| Keys                  | Action                                     |
+| --------------------- | ------------------------------------------ |
+| <Keys keys="ArrowUp" />, <Keys keys="ArrowDown" /> | Select the layer above or below |
+| <Keys keys="Enter" />, <Keys keys="Space" /> | Select the focused layer |
+| <Keys keys="F2" />    | Rename the layer, when allowed             |
+| <Keys keys="Delete" /> | Remove the layer, when allowed            |
+| <Keys keys="Enter" />, <Keys keys="Escape" /> | While renaming: keep or cancel the new name |
+| <Keys keys="Space" /> on the grip, then arrows | Move the layer; Space drops it, Escape cancels |

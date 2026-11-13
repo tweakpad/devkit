@@ -82,7 +82,7 @@ export class InlineRow extends SearchableRow {
   constructor(
     surface: HTMLElement,
     private readonly contents: InlineContents,
-    params: InlineRowParams,
+    params: Omit<InlineRowParams, 'items'>,
   ) {
     super(surface);
     const eligible = () => contents.entries.filter(({ row }) => !row.hidden && !row.disposed);

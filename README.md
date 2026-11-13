@@ -36,7 +36,7 @@ generated from the package's TypeScript declarations. The pages ship in the pack
 
 | Section    | Pages                                                                                                                                            |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pane       | [Pane](docs/pane/pane.mdx), [Vertical tabs](docs/pane/vertical-tabs.mdx)                                                                         |
+| Pane       | [Pane](docs/pane/pane.mdx), [Vertical tabs](docs/pane/vertical-tabs.mdx), [Layers](docs/pane/layers.mdx)                                         |
 | Controls   | [Bindings](docs/controls/bindings.mdx), [Buttons](docs/controls/buttons.mdx), [Colors](docs/controls/colors.mdx), [Rows](docs/controls/rows.mdx) |
 | Monitoring | [Monitors](docs/monitoring/monitors.mdx), [Graphs](docs/monitoring/graphs.mdx), [Performance monitor](docs/monitoring/performance.mdx)           |
 | History    | [Version history](docs/history/version-history.mdx)                                                                                              |
@@ -92,6 +92,11 @@ task after rendering.
 | 30 changes spread over 1000 (~1 visible)                | 0.9 ms       | 3.5 / 5.0 ms   | 60                   |
 | Worst case: all 30 changes on visible rows, budget 2 ms | 2.1 ms       | 6.6 / 7.7 ms   | 60 (each row ~14 Hz) |
 | Same, budget 8 ms (no deferral)                         | 6.2 ms       | 19 / 32 ms     | drops                |
+
+A layer stack of 200 layers, each with a five-control panel, takes about 10 ms to declare
+and about 640 ms to first render (Lit dev mode), most of it in the library's drag-and-drop list
+and its rows; selecting another layer takes about 60 ms. Dragging a row in that stack costs about
+6 ms of script across the whole gesture.
 
 The remaining cost belongs to the library elements. The library cost spike
 (`demo/spike-library.html`) measured 110–290 µs per `.value` update, and 0.2–3.3 ms to mount

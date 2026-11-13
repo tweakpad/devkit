@@ -109,12 +109,17 @@ describe('documentation pages', () => {
     }
   });
 
-  it('build into docs.json with a described API Reference for every page', () => {
-    const index = buildIndex();
-    expect(index.pages.map((page) => page.id)).toEqual(pages.map((page) => page.id));
-    for (const page of index.pages)
-      for (const name of page.api) expect(index.api[name], `${page.id}: ${name}`).toBeDefined();
-  });
+  // Reading the declarations runs the TypeScript compiler: seconds, more on a busy machine.
+  it(
+    'build into docs.json with a described API Reference for every page',
+    { timeout: 30_000 },
+    () => {
+      const index = buildIndex();
+      expect(index.pages.map((page) => page.id)).toEqual(pages.map((page) => page.id));
+      for (const page of index.pages)
+        for (const name of page.api) expect(index.api[name], `${page.id}: ${name}`).toBeDefined();
+    },
+  );
 
   it('render each page from its own story file, and nothing else from it', () => {
     const storyFiles = DOC_SECTIONS.flatMap((section) =>

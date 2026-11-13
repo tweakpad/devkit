@@ -81,14 +81,14 @@ const preview = definePreview({
       storySort: {
         order: [
           'Pane',
-          ['Pane', 'Vertical tabs'],
+          ['Pane', 'Vertical tabs', 'Layers'],
           'Controls',
           ['Bindings', 'Buttons', 'Colors', 'Rows'],
           'Monitoring',
           ['Monitors', 'Graphs', 'Performance monitor'],
           'History',
           'Showcases',
-          ['Playground', 'Vertical tabs', 'Graphs', 'Grouping', 'Stress'],
+          ['Playground', 'Vertical tabs', 'Layers', 'Graphs', 'Grouping', 'Stress'],
         ],
       },
     },

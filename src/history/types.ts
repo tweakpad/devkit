@@ -56,7 +56,9 @@ export type ControlDescriptor =
   | { type: 'string' }
   /** `object`: a `{r, g, b}` object, which only takes `#rrggbb`. */
   | { type: 'color'; object: boolean }
-  | { type: 'option'; items: readonly { label: string; value: unknown }[] };
+  | { type: 'option'; items: readonly { label: string; value: unknown }[] }
+  /** The order and members of a layer stack, stored as one JSON string. */
+  | { type: 'layers' };
 
 /** The part of a binding the history needs: no DOM, so it can be tested on its own. */
 export interface TrackedControl {

@@ -204,7 +204,8 @@ export class History {
     const group = 1 + working.changes.reduce((max, change) => Math.max(max, change.g ?? 0), 0);
     const at = this.#now();
     let any = false;
-    for (const [path, stored] of Object.entries(source.values)) {
+    for (const path of this.#restoreOrder(source.values)) {
+      const stored = source.values[path]!;
       const live = this.#live.get(path);
       let to: StoredValue = stored;
       if (live) {
@@ -369,6 +370,25 @@ export class History {
         return true;
       }
     return false;
+  }
+
+  /**
+   * The order a restore applies values in: layer stacks first, outer before inner, so the layers
+   * a stack re-creates have live controls before their own values are applied. Paths are looked
+   * up live as the restore goes, so they find controls created on the way.
+   */
+  *#restoreOrder(values: Readonly<Record<string, StoredValue>>): Generator<string> {
+    const done = new Set<string>();
+    const isStack = (path: string) => this.#live.get(path)?.control.descriptor.type === 'layers';
+    for (;;) {
+      const next = Object.keys(values)
+        .filter((path) => !done.has(path) && isStack(path))
+        .sort((a, b) => a.split('/').length - b.split('/').length)[0];
+      if (next === undefined) break;
+      done.add(next);
+      yield next;
+    }
+    for (const path of Object.keys(values)) if (!done.has(path)) yield path;
   }
 
   #freeze(label: string | undefined): void {

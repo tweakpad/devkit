@@ -14,6 +14,7 @@ import { createControl, type BindingParams, type ControlKind } from './factory.j
 import { ControlRow } from './rows.js';
 import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
 import { createGraph, GraphApi } from './graph.js';
+import { LayersApi, type LayersParams } from './layers.js';
 import {
   createPerformanceMonitor,
   PerformanceMonitorApi,
@@ -24,6 +25,7 @@ import {
   InlineRow,
   InlineRowApi,
   type InlineApis,
+  type InlineBindingItem,
   type InlineItem,
   type InlineRowParams,
   type ValidatedInlineItems,
@@ -221,15 +223,41 @@ export class ContainerApi {
       if (item.type !== 'button' && !(item.key in item.target))
         throw new TypeError(`devkit: row binding key ${String(item.key)} does not exist`);
     }
+    const { row, items } = ContainerApi.inlineRow(this.context, this.path, params);
+    this.#addRow(row, row.metadata);
+    const api = new InlineRowApi<T>(row, items as InlineApis<T>, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /**
+   * @internal Builds an inline row of `items` without placing it: `addRow`, and the bars of a
+   * layer stack, whose `build` makes the items a row does not know and returns their handles.
+   */
+  static inlineRow<I extends { type: string; width?: number | 'auto' }>(
+    context: PaneContext,
+    path: readonly string[],
+    params: Omit<InlineRowParams, 'items'> & { items: readonly I[] },
+    build?: (
+      item: I,
+      content: ContainerApi,
+      add: (row: Row, metadata: SearchMetadata) => void,
+    ) => { readonly element: HTMLElement } | undefined,
+  ): { row: InlineRow; items: { readonly element: HTMLElement }[] } {
     const surface = document.createElement('div');
     surface.className = 'inline-row';
-    const content = new ContainerApi(this.context, surface, undefined, true, this.path);
+    const content = new ContainerApi(context, surface, undefined, true, path);
     try {
       const items = params.items.map((item) => {
         const api =
-          item.type === 'button'
-            ? content.addButton(item)
-            : content.addBinding(item.target, item.key as never, item);
+          build?.(item, content, (row, metadata) => content.#addRow(row, metadata)) ??
+          (item.type === 'button'
+            ? content.addButton(item as unknown as ButtonParams)
+            : content.addBinding(
+                (item as unknown as InlineBindingItem).target,
+                (item as unknown as InlineBindingItem).key as never,
+                item as unknown as InlineBindingItem,
+              ));
         api.element.style.flex = item.width === 'auto' ? '0 0 auto' : `${item.width ?? 1} 1 0`;
         return api;
       });
@@ -247,10 +275,7 @@ export class ContainerApi {
         },
         params,
       );
-      this.#addRow(row, row.metadata);
-      const api = new InlineRowApi<T>(row, items as InlineApis<T>, this.context);
-      this.#children.push(api);
-      return api;
+      return { row, items };
     } catch (error) {
       content.dispose();
       throw error;
@@ -298,6 +323,22 @@ export class ContainerApi {
     this.#searchChildren.add(tabs.searchNode);
     this.context.refreshSearch?.();
     return tabs;
+  }
+
+  /**
+   * Adds a stack of layers the user can select, reorder, toggle and, as allowed, rename, remove
+   * and add from `types`. Each layer may have a panel of controls, shown while it is selected.
+   */
+  addLayers<const S extends string = never, D = unknown, const T extends string = never>(
+    params: LayersParams<S, D, T>,
+  ): LayersApi<S, D, T> {
+    if (this.inline) throw new Error('devkit: layers cannot go in a row');
+    const layers = new LayersApi<S, D, T>(this.context, params, this.path);
+    this.#addBlock(layers.element);
+    this.#children.push(layers);
+    this.#searchChildren.add(layers.searchNode);
+    this.context.refreshSearch?.();
+    return layers;
   }
 
   /**
@@ -429,6 +470,22 @@ export class TabsApi {
   /** @internal Filters the pages' fields, returning the number of matches. */
   filter(query: string): number {
     return filterSearchTree(this.searchNode, query);
+  }
+
+  /**
+   * Listens for the user picking a page. Returns a function that removes the listener. Setting
+   * `selected` fires nothing.
+   * @event select - Fires when the user picks a page, with its 0-based index.
+   */
+  on(type: 'select', listener: (index: number) => void): () => void {
+    void type;
+    // Tabs nested in a page bubble their own picks through this element.
+    const handle = (event: Event) => {
+      if (event.target === this.element)
+        listener((event as CustomEvent<{ index: number }>).detail.index);
+    };
+    this.element.addEventListener('tweak-select', handle);
+    return () => this.element.removeEventListener('tweak-select', handle);
   }
 
   /** Removes the tab group and everything in its pages. */

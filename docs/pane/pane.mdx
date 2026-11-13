@@ -83,7 +83,8 @@ shadows.addBinding(light, 'bias', { min: 0, max: 0.01 });`}
 ### Tabs
 
 `addTabs` splits controls into pages, one visible at a time. Each page takes bindings, folders and
-other tabs, and only the visible page is kept up to date.
+other tabs, and only the visible page is kept up to date. `selected` reads or sets the visible page,
+and `on('select', index => …)` reports the pages the user picks.
 
 <Preview
   title="Tabs"

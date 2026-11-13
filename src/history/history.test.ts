@@ -289,6 +289,50 @@ describe('History', () => {
     expect(history.versions).toHaveLength(1);
   });
 
+  it('restores layer stacks first, so the controls they re-create get their values', () => {
+    const { history } = page(new Store());
+    const panel: Control[] = [];
+    // A stack whose `set` re-creates a layer, and the layer's control, as a stack does.
+    const stack = new Control('{"l":[["a",null]],"d":["a"],"n":1}', { type: 'layers' });
+    let untrackB = () => {};
+    const createB = () => {
+      const control = new Control(0, NUMBER);
+      panel.push(control);
+      untrackB = history.track(['Layers', 'b'], 'size', control);
+      return control;
+    };
+    // b's value comes first in the stored values: the restore must still apply the stack first.
+    const b = createB();
+    history.track(['Layers'], '@layers', stack);
+    history.track(['Layers', 'a'], 'size', new Control(1, NUMBER));
+    stack.edit('{"l":[["a",null],["b","t"]],"d":["a"],"n":2}');
+    b.edit(7);
+    history.advance();
+    // Remove b: its value stays in the working version, but it has no control.
+    b.edit(3);
+    stack.edit('{"l":[["a",null]],"d":["a"],"n":2}');
+    untrackB();
+    const original = stack.set.bind(stack);
+    stack.set = (value) => {
+      original(value);
+      if (String(value).includes('"b"')) createB();
+    };
+    history.restore(1);
+    expect(panel).toHaveLength(2);
+    expect(panel[1]!.value).toBe(7);
+    // Applied to the live control and announced, not only loaded on creation.
+    expect(panel[1]!.sets).toEqual([7]);
+    expect(history.current.values['Layers/b/size']).toBe(7);
+  });
+
+  it('keeps layer structures only when they decode', () => {
+    const descriptor: ControlDescriptor = { type: 'layers' };
+    expect(encode('{"l":[],"d":[],"n":1}', descriptor)).toBe('{"l":[],"d":[],"n":1}');
+    expect(encode('nope', descriptor)).toBeUndefined();
+    expect(decode('{"l":[],"d":[],"n":1}', descriptor)).toEqual({ value: '{"l":[],"d":[],"n":1}' });
+    expect(decode(3, descriptor)).toBeUndefined();
+  });
+
   it('caps the change log and pauses while disabled', () => {
     const { history, timers } = page(new Store(), { maxChanges: 2 });
     const speed = new Control(0, NUMBER);

@@ -8,6 +8,7 @@ import { checkColorApi } from './color-api-checks.js';
 import { checkMonitorBindings } from './monitor-binding-checks.js';
 import { checkGraphs } from './graph-checks.js';
 import { checkHistory } from './history-checks.js';
+import { checkLayers } from './layers-checks.js';
 
 /** Generic composition fixture: no dependency on any production control's rendering. */
 class ComposedRow extends SearchableRow {
@@ -97,6 +98,7 @@ try {
   checks.push(...(await checkMonitorBindings()));
   checks.push(...(await checkGraphs()));
   checks.push(...(await checkHistory()));
+  checks.push(...(await checkLayers()));
   document.getElementById('result')!.textContent = `${checks.length} browser checks passed.`;
   document.body.dataset.result = 'passed';
 } catch (error) {
