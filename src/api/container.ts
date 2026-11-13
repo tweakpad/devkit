@@ -13,6 +13,7 @@ import { Chunk, CHUNK_SIZE, type PaneContext, type Row } from './context.js';
 import { createControl, type BindingParams, type ControlKind } from './factory.js';
 import { ControlRow } from './rows.js';
 import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
+import { SeparatorApi, SeparatorRow, type SeparatorParams } from './separator.js';
 import { createGraph, GraphApi } from './graph.js';
 import { LayersApi, type LayersParams } from './layers.js';
 import {
@@ -172,6 +173,18 @@ export class ContainerApi {
     const row = new ButtonRow(this.context, params);
     this.#addRow(row, row.metadata);
     const api = new ButtonApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /**
+   * Adds the library's Separator: a rule between the rows above and below it, with section
+   * spacing around it. It hides while the pane is searched.
+   */
+  addSeparator(params: SeparatorParams = {}): SeparatorApi {
+    const row = new SeparatorRow(params);
+    this.#addRow(row, row.metadata);
+    const api = new SeparatorApi(row, this.context);
     this.#children.push(api);
     return api;
   }

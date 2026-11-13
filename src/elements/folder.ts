@@ -125,7 +125,7 @@ export class TweakFolder extends LitElement {
         inset-inline-start: calc(
           var(--tp-space-1) + var(--tweak-folder-chevron-size) / 2 - var(--tp-border-width) / 2
         );
-        border-inline-start: var(--tp-border-width) solid var(--tp-border);
+        border-inline-start: var(--tp-border-width) solid var(--tweak-border-color);
         opacity: 0;
         pointer-events: none;
       }

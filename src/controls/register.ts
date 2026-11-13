@@ -11,6 +11,7 @@ import {
   TpInput,
   TpKbd,
   TpSelect,
+  TpSeparator,
   TpSlider,
   TpSwitch,
   TpTabs,
@@ -48,6 +49,7 @@ export function registerElements(): void {
     TpMenu,
     TpMenuItem,
     TpToggle,
+    TpSeparator,
   ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
   for (const element of [

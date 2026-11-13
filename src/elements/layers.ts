@@ -54,7 +54,7 @@ export class TweakLayers extends LitElement {
 
       .panels {
         padding-block-start: var(--tweak-section-gap);
-        border-block-start: 1px solid var(--tp-border);
+        border-block-start: 1px solid var(--tweak-border-color);
       }
 
       .bar:empty,
@@ -64,12 +64,12 @@ export class TweakLayers extends LitElement {
 
       .bar.header {
         padding-block-end: var(--tweak-row-gap);
-        border-block-end: 1px solid var(--tp-border);
+        border-block-end: 1px solid var(--tweak-border-color);
       }
 
       .bar.footer {
         padding-block-start: var(--tweak-row-gap);
-        border-block-start: 1px solid var(--tp-border);
+        border-block-start: 1px solid var(--tweak-border-color);
       }
 
       tp-drag-drop-list {

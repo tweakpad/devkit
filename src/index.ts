@@ -14,6 +14,7 @@ export type { ColorPickerMode, ColorObjectType } from './controls/color.js';
 export type { ColorFormat } from './controls/views.js';
 export type { MonitorOptions } from './controls/monitor-view.js';
 export { ButtonApi, type ButtonParams } from './api/buttons.js';
+export { SeparatorApi, type SeparatorParams } from './api/separator.js';
 export { GraphApi } from './api/graph.js';
 export type {
   GraphGuide,

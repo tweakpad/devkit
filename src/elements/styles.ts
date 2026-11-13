@@ -54,6 +54,19 @@ export const containerStyles = css`
     min-inline-size: 0;
   }
 
+  /* A separator between rows parts sections: the gap on each side is the section gap. Its rule
+     is dimmer than the library's border, so it groups rows without boxing them. */
+  .search-item.separator {
+    padding-block: calc(var(--tweak-section-gap) - var(--tweak-row-gap));
+  }
+
+  /* The rule spans half the row, centered. The Separator element itself is the painted line. */
+  .search-item.separator > tp-separator {
+    justify-self: center;
+    inline-size: 50%;
+    background-color: var(--tweak-separator-color);
+  }
+
   .search-item > tp-button {
     inline-size: 100%;
     min-inline-size: 0;
@@ -219,5 +232,10 @@ export const paneTokens = css`
 
     /* One surface for a graph row and its plot. */
     --tweak-graph-surface: var(--tp-muted);
+
+    /* Every line devkit draws (the pane's edge, dividers, guides, outlines, separators): the
+       library's border, dimmed so it organizes without boxing in. */
+    --tweak-border-color: color-mix(in oklab, var(--tp-border) 25%, transparent);
+    --tweak-separator-color: var(--tweak-border-color);
   }
 `;

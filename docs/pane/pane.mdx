@@ -2,7 +2,7 @@
 title: Pane
 description: A panel of live controls bound to your application's objects, floating over the page or placed in it.
 symbol: new Pane(options)
-api: [Pane, PaneOptions, PaneAnchor, FolderApi, FolderParams, TabsApi, TabPageApi, TabsParams, TabPageParams]
+api: [Pane, PaneOptions, PaneAnchor, FolderApi, FolderParams, TabsApi, TabPageApi, TabsParams, TabPageParams, SeparatorApi, SeparatorParams]
 ---
 
 <Preview
@@ -97,6 +97,27 @@ const tabs = pane.addTabs({ pages: [{ title: 'Camera' }, { title: 'Post' }] });
 tabs.pages[0].addBinding(params, 'fov', { min: 10, max: 120 });
 tabs.pages[1].addBinding(params, 'exposure', { min: 0, max: 4 });
 tabs.pages[1].addBinding(params, 'bloom');`}
+/>
+
+### Separators
+
+`addSeparator` draws a faint rule between the rows above and below it, centered at half their
+width, with the spacing of a section around it, to group controls without the heading of a folder. Panes, folders, tab pages and layer
+panels all take separators. A separator matches no search, so it hides while the pane is searched.
+It is decorative; `decorative: false` announces it to assistive technology as a boundary.
+
+<Preview
+  title="Separators"
+  code={`<div id="pane-separators"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const light = { intensity: 1.2, radius: 8, shadows: true, bias: 0.002 };
+const pane = new Pane({ container: document.getElementById('pane-separators'), title: 'Light' });
+pane.addBinding(light, 'intensity', { min: 0, max: 4 });
+pane.addBinding(light, 'radius', { min: 0, max: 50 });
+pane.addSeparator();
+pane.addBinding(light, 'shadows');
+pane.addBinding(light, 'bias', { min: 0, max: 0.01, step: 0.0005 });`}
 />
 
 ### Search

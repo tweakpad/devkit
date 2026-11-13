@@ -88,7 +88,7 @@ export class TweakTabs extends LitElement {
       pointer-events: none;
       z-index: 1;
       fill: var(--tp-card);
-      stroke: var(--tp-border);
+      stroke: var(--tweak-border-color);
       stroke-width: var(--tp-border-width);
       filter: drop-shadow(var(--tp-shadow-md));
     }
