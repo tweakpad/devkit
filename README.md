@@ -93,10 +93,9 @@ task after rendering.
 | Worst case: all 30 changes on visible rows, budget 2 ms | 2.1 ms       | 6.6 / 7.7 ms   | 60 (each row ~14 Hz) |
 | Same, budget 8 ms (no deferral)                         | 6.2 ms       | 19 / 32 ms     | drops                |
 
-A layer stack of 200 layers, each with a five-control panel, takes about 10 ms to declare
-and about 640 ms to first render (Lit dev mode), most of it in the library's drag-and-drop list
-and its rows; selecting another layer takes about 60 ms. Dragging a row in that stack costs about
-6 ms of script across the whole gesture.
+A layer stack of 200 layers, each with a five-control panel, takes about 230 ms to declare and
+first render on the library's Layers widget (Lit dev mode); selecting another layer takes about
+18 ms.
 
 The remaining cost belongs to the library elements. The library cost spike
 (`demo/spike-library.html`) measured 110–290 µs per `.value` update, and 0.2–3.3 ms to mount

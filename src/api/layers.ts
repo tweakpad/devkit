@@ -1,15 +1,15 @@
-import { html, nothing, type TemplateResult } from 'lit';
 import type { IconDefinition } from '@tweakpad/ui';
+import type {
+  Layer,
+  LayerState,
+  LayerStateValue,
+  LayersChange,
+  LayersMove,
+} from '@tweakpad/ui/widgets';
 import { plusIcon } from '@tweakpad/ui/icons/plus';
 import { trashIcon } from '@tweakpad/ui/icons/trash';
 import type { SearchControlNode, SearchGroupNode, SearchNode } from '../core/search.js';
-import {
-  LAYER_ACTION,
-  TweakLayerRow,
-  TweakLayers,
-  type LayerAction,
-  type LayerStateView,
-} from '../elements/layers.js';
+import { TweakLayers } from '../elements/layers.js';
 import { TweakTabPage } from '../elements/tabs.js';
 import {
   declaredIds,
@@ -30,14 +30,17 @@ import { MenuRow, type MenuEntry } from './menu.js';
 export interface LayerStateParams<S extends string = string> {
   /** Name of the state in `LayerApi.states`, events and history paths. */
   key: S;
-  /** Accessible name and tooltip of the toggle. */
+  /** Accessible name of the state's control in each row. */
   label: string;
   /**
-   * Icon of the state's toggle in each row while on. Without one the row shows no toggle for
+   * Icon of the state's control in each row while on. Without one the row shows no control for
    * the state, which code and bar actions still change.
    */
   icon?: IconDefinition;
-  /** Icon of the toggle while off, in place of `icon`. */
+  /**
+   * Icon of the control while off. Without one the control shows only while on, and while off
+   * shows faded when the pointer is over the row or it has focus.
+   */
   offIcon?: IconDefinition;
   /**
    * Value of the state for layers that do not set it.
@@ -45,34 +48,40 @@ export interface LayerStateParams<S extends string = string> {
    */
   default?: boolean;
   /**
-   * When the toggle shows: always, or only while the state is on or off. A toggle shown only
-   * sometimes keeps its place, and shows while the pointer is over the row's toggles.
+   * When the control shows at rest: always, or only while the state is on or off. A control shown
+   * only sometimes keeps its place, and shows faded while the row is hovered or has focus.
    * @default 'always'
    */
   display?: 'always' | 'on' | 'off';
   /**
-   * Shows the layer's name dimmed while the state is off, as `enabled` does.
+   * Shows the layer's name and icon dimmed while the state is off.
    * @default false
    */
   mutes?: boolean;
+  /**
+   * What a press on the control of a selected layer changes: that layer, or every selected layer.
+   * @default 'layer'
+   */
+  scope?: 'layer' | 'selection';
 }
 
 /**
- * How the `enabled` state shows in each row. It is on by default and dims its row when off; with
- * no `icon` the row shows no toggle for it.
+ * How the `enabled` state shows in each row. A disabled layer is frozen: it shows dimmed, and
+ * the user cannot select, move, rename or remove it, or change its other states. With no `icon`
+ * the row shows no control for it.
  */
 export interface LayerEnabledParams {
   /**
-   * Accessible name and tooltip of the toggle.
+   * Accessible name of the control.
    * @default 'Enabled'
    */
   label?: string;
-  /** Icon of the toggle while enabled; without one the row shows no toggle for `enabled`. */
+  /** Icon of the control while enabled; without one the row shows no control for `enabled`. */
   icon?: IconDefinition;
-  /** Icon of the toggle while disabled, in place of `icon`. */
+  /** Icon of the control while disabled, in place of `icon`. */
   offIcon?: IconDefinition;
   /**
-   * When the toggle shows: always, or only while the layer is enabled or disabled.
+   * When the control shows at rest: always, or only while the layer is enabled or disabled.
    * @default 'always'
    */
   display?: 'always' | 'on' | 'off';
@@ -91,23 +100,21 @@ export interface LayerParams<S extends string = never, D = unknown, T extends st
   name?: string;
   /** Icon before the name; defaults to the type's icon. */
   icon?: IconDefinition;
-  /** Starting values of the states; the rest take the type's, then the stack's defaults. */
-  states?: Partial<Record<'enabled' | NoInfer<S>, boolean>>;
   /**
-   * Shows the layer dimmed: it cannot be selected, dragged, renamed or toggled.
-   * @default false
+   * Starting values of the states; the rest take the type's, then the stack's defaults. An
+   * `enabled` of false freezes the layer.
    */
-  disabled?: boolean;
-  /** Whether the user may drag this layer, in place of the stack's `reorder`. */
+  states?: Partial<Record<'enabled' | NoInfer<S>, boolean>>;
+  /** Whether the user may move this layer, in place of the stack's `reorder`. */
   reorder?: boolean;
   /** Whether the user may rename this layer, in place of the stack's `rename`. */
   rename?: boolean;
   /** Whether the user may remove this layer, in place of the stack's `remove`. */
   remove?: boolean;
   /**
-   * Builds the layer's panel, shown while it is selected: add controls to `panel` as to the
-   * pane. It runs once, when the layer is created. Without it, and without the type's, the layer
-   * has no panel.
+   * Builds the layer's panel, shown while it is the active layer: add controls to `panel` as to
+   * the pane. It runs once, when the layer is created. Without it, and without the type's, the
+   * layer has no panel.
    */
   controls?: (panel: ContainerApi, layer: LayerApi<S, D, T>) => void;
   /** Anything the application keeps with the layer, such as the object it stands for. */
@@ -141,7 +148,7 @@ export interface LayerTypeParams<S extends string = never, D = unknown, T extend
 export interface LayersRules<S extends string = never, D = unknown, T extends string = string> {
   /** Whether the user may add a layer of `type`; the add menu shows refused types dimmed. */
   add?: (type: NoInfer<T>, layers: LayersApi<S, D, T>) => boolean;
-  /** Whether the user may drop `layer` at index `to`; a refused drop goes back. */
+  /** Whether the user may move `layer` to index `to`; a refused place is never offered. */
   move?: (layer: LayerApi<S, D, T>, to: number, layers: LayersApi<S, D, T>) => boolean;
   /** Whether the user may rename `layer` to `name`; return a string to use that name instead. */
   rename?: (layer: LayerApi<S, D, T>, name: string, layers: LayersApi<S, D, T>) => boolean | string;
@@ -210,7 +217,7 @@ export interface LayersAddItem {
   width?: number | 'auto';
 }
 
-/** The built-in remove action: removes the selected layer, when the user may. */
+/** The built-in remove action: removes the selected layers the user may remove. */
 export interface LayersRemoveItem {
   /** The item's kind. */
   type: 'remove';
@@ -245,16 +252,21 @@ export interface LayersParams<S extends string = never, D = unknown, T extends s
   title?: string;
   /** Stable name in the pane's history paths, in place of the title. */
   id?: string;
-  /** The states every layer has besides `enabled`, toggled in each row in this order. */
+  /** The states every layer has besides `enabled`, with controls in each row in this order. */
   states?: readonly LayerStateParams<S>[];
   /** How the always-present `enabled` state shows. */
   enabled?: LayerEnabledParams;
   /**
-   * How the user reorders layers: dragging the whole row (`true` or `'item'`), only its grip
-   * (`'handle'`), or not at all. The grip also moves a row from the keyboard.
+   * How the user moves layers: dragging the whole row (`true` or `'item'`), only its handle
+   * (`'handle'`), or not at all. The keyboard moves them too.
    * @default 'item'
    */
   reorder?: boolean | 'item' | 'handle';
+  /**
+   * How a drag shows where the layer lands: a line between the rows, or the rows making space.
+   * @default 'line'
+   */
+  drop?: 'line' | 'displace';
   /**
    * Whether the user may rename layers, with a double-click or F2.
    * @default false
@@ -265,7 +277,7 @@ export interface LayersParams<S extends string = never, D = unknown, T extends s
    * @default false
    */
   remove?: boolean;
-  /** Id of the layer selected first, or null for none; defaults to the top layer. */
+  /** Id of the layer active first, or null for none; defaults to the top enabled layer. */
   selected?: string | null;
   /** The kinds of layers, by type key, for `add` and for re-creating added layers. */
   types?: { readonly [K in T]: LayerTypeParams<S, D, T> };
@@ -277,6 +289,8 @@ export interface LayersParams<S extends string = never, D = unknown, T extends s
   header?: readonly LayersBarItem<S, D, T>[];
   /** Items below the list, acting on the stack. */
   footer?: readonly LayersBarItem<S, D, T>[];
+  /** Text shown in the list's place while the stack has no layers. */
+  empty?: string;
   /**
    * Starts the stack hidden, which also leaves it out of search.
    * @default false
@@ -294,10 +308,14 @@ export type LayersSource = 'user' | 'api' | 'restore';
 
 /** What each event of `LayersApi.on()` receives. */
 export interface LayersEvents<S extends string = never, D = unknown, T extends string = string> {
-  /** The selection changed; `layer` is null when nothing is selected. */
+  /**
+   * The selection or the active layer changed; `layer` is the active layer, null when nothing is
+   * selected, and `selection` every selected layer, top first.
+   */
   select: {
     layer: LayerApi<S, D, T> | null;
     previous: LayerApi<S, D, T> | null;
+    selection: readonly LayerApi<S, D, T>[];
     source: LayersSource;
   };
   /** A layer moved from index `from` to index `to`. */
@@ -320,13 +338,28 @@ interface Entry<S extends string, D, T extends string> {
   name: string;
   icon: IconDefinition | undefined;
   readonly states: Record<string, boolean>;
-  disabled: boolean;
   readonly flags: { reorder?: boolean; rename?: boolean; remove?: boolean };
   readonly api: LayerApi<S, D, T>;
   page: TweakTabPage | null;
   panel: TabPageApi | null;
   readonly untrack: (() => void)[];
   readonly finish: Map<string, Set<(value: unknown) => void>>;
+}
+
+/** A state as the stack declares it, with the values the widget steps through. */
+interface StateView {
+  readonly key: string;
+  readonly label: string;
+  readonly default: boolean;
+  readonly scope: 'layer' | 'selection';
+  readonly values: readonly LayerStateValue[];
+}
+
+/** What the widget proposed, gathered until its proposals of one change have all arrived. */
+interface Proposal {
+  change?: { change: LayersChange; order: readonly string[]; keyboard: boolean };
+  value?: readonly string[];
+  active?: string | null;
 }
 
 /** What a `LayerApi` asks of its stack. */
@@ -338,7 +371,6 @@ interface LayerHost {
   rename(layer: LayerApi<string, unknown, string>, name: string): void;
   setIcon(layer: LayerApi<string, unknown, string>, icon: IconDefinition | undefined): void;
   setState(layer: LayerApi<string, unknown, string>, key: string, value: boolean): void;
-  setDisabled(layer: LayerApi<string, unknown, string>, disabled: boolean): void;
   remove(layer: LayerApi<string, unknown, string>): void;
 }
 
@@ -396,28 +428,19 @@ export class LayerApi<S extends string = never, D = unknown, T extends string = 
     this.#host.setState(this.#self, key, value);
   }
 
-  /** The panel shown while the layer is selected, or null for a layer without controls. */
+  /** The panel shown while the layer is active, or null for a layer without controls. */
   get panel(): ContainerApi | null {
     return this.#host.entry(this.#self).panel;
   }
 
-  /** Whether the layer is the selected one. */
+  /** Whether the layer is the active one, whose panel shows. */
   get selected(): boolean {
     return this.#host.selected() === this.#self;
   }
 
-  /** Selects the layer, firing `select`. */
+  /** Selects the layer alone and makes it active, firing `select`. */
   select(): void {
     this.#host.select(this.#self);
-  }
-
-  /** Whether the layer is dimmed: not selectable, draggable, renameable or toggleable. */
-  get disabled(): boolean {
-    return this.#host.entry(this.#self).disabled;
-  }
-
-  set disabled(disabled: boolean) {
-    this.#host.setDisabled(this.#self, disabled);
   }
 
   /** Removes the layer and its panel, firing `remove`. */
@@ -427,6 +450,27 @@ export class LayerApi<S extends string = never, D = unknown, T extends string = 
 }
 
 const ENABLED = 'enabled';
+
+/** The values of a two-valued state, as the widget steps through them: on, then off. */
+function stateValues(
+  icon: IconDefinition | undefined,
+  offIcon: IconDefinition | undefined,
+  display: 'always' | 'on' | 'off',
+  mutes: boolean,
+): LayerStateValue[] {
+  // A state without an icon has no control. One icon cannot show both values, so without an
+  // `offIcon` the control shows while on and, while off, only on the row's hover or focus.
+  const on: LayerStateValue = { value: 'true', label: 'On' };
+  const off: LayerStateValue = { value: 'false', label: 'Off' };
+  if (icon) {
+    on.icon = icon;
+    on.display = display === 'off' ? 'hover' : 'always';
+    off.icon = offIcon ?? icon;
+    off.display = display === 'on' || !offIcon ? 'hover' : 'always';
+  }
+  if (mutes) off.dims = true;
+  return [on, off];
+}
 
 /** A stack of layers, as `addLayers` returns it. */
 export class LayersApi<S extends string = never, D = unknown, T extends string = string> {
@@ -438,20 +482,23 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
   readonly #params: LayersParams<S, D, T>;
   /** History segments of the stack: its container's path and its own name. */
   readonly #path: readonly string[];
-  readonly #states: readonly (LayerStateView & { default: boolean; mutes: boolean })[];
+  readonly #states: readonly StateView[];
   readonly #declaredIds: readonly string[];
-  /** Whether any state has an icon, and so a toggle in the rows. */
-  readonly #toggles: boolean;
   #entries: Entry<S, D, T>[] = [];
   readonly #byId = new Map<string, Entry<S, D, T>>();
   readonly #byApi = new Map<LayerApi<S, D, T>, Entry<S, D, T>>();
+  /** The active layer, whose panel shows. */
   #selected: Entry<S, D, T> | null = null;
-  #renaming: string | null = null;
+  /** Every selected layer; the active one among them. */
+  #selection = new Set<Entry<S, D, T>>();
+  /** Whether the widget's records are out of date. */
+  #stale = true;
   #counter = 1;
   #hidden = false;
   #filtered = false;
   #disabled = false;
   #disposed = false;
+  #proposal: Proposal | null = null;
   readonly #listeners = new Map<keyof LayersEvents, Set<(event: never) => void>>();
   readonly #structureListeners = new Set<(value: unknown) => void>();
   readonly #untrack: (() => void)[] = [];
@@ -475,23 +522,23 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
       {
         key: ENABLED,
         label: enabled.label ?? 'Enabled',
-        icon: enabled.icon,
-        offIcon: enabled.offIcon,
-        display: enabled.display ?? 'always',
         default: true,
-        mutes: true,
+        scope: 'layer',
+        values: stateValues(enabled.icon, enabled.offIcon, enabled.display ?? 'always', true),
       },
       ...(params.states ?? []).map((state) => ({
         key: state.key,
         label: state.label,
-        icon: state.icon,
-        offIcon: state.offIcon,
-        display: state.display ?? 'always',
         default: state.default ?? false,
-        mutes: state.mutes ?? false,
+        scope: state.scope ?? 'layer',
+        values: stateValues(
+          state.icon,
+          state.offIcon,
+          state.display ?? 'always',
+          state.mutes ?? false,
+        ),
       })),
     ];
-    this.#toggles = this.#states.some((state) => state.icon !== undefined);
     const keys = new Set<string>();
     for (const state of this.#states) {
       if (keys.has(state.key))
@@ -515,9 +562,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
 
     const element = document.createElement(TweakLayers.tagName) as TweakLayers;
     this.element = element;
-    element.activation = this.#activation();
-    this.#configureList();
-    element.addEventListener(LAYER_ACTION, this.#onAction);
+    this.#configureWidget();
 
     const listNode: SearchControlNode = {
       kind: 'control',
@@ -556,8 +601,8 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     };
 
     this.#build();
-    this.#makeBar(params.header ?? [], element.header);
-    this.#makeBar(params.footer ?? [], element.footer);
+    this.#makeBar(params.header ?? [], 'header');
+    this.#makeBar(params.footer ?? [], 'footer');
     this.#hidden = params.hidden ?? false;
     this.#syncHidden();
     this.disabled = params.disabled ?? false;
@@ -573,20 +618,22 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     return this.#byId.get(id)?.api;
   }
 
-  /** The selected layer, or null. Set it to a layer, its id or null; it fires `select`. */
+  /**
+   * The active layer, whose panel shows, or null. Setting it to a layer, its id or null selects
+   * that layer alone; it fires `select`.
+   */
   get selected(): LayerApi<S, D, T> | null {
     return this.#selected?.api ?? null;
   }
 
   set selected(layer: LayerApi<S, D, T> | string | null) {
-    const entry =
-      layer === null
-        ? null
-        : typeof layer === 'string'
-          ? this.#byId.get(layer)
-          : this.#byApi.get(layer);
-    if (entry === undefined) throw new RangeError(`devkit: no layer ${String(layer)}`);
+    const entry = layer === null ? null : this.#find(layer);
     this.#run('api', () => this.#select(entry));
+  }
+
+  /** Every selected layer, top first; the user selects several with Shift and Control or Command. */
+  get selection(): readonly LayerApi<S, D, T>[] {
+    return this.#selectedEntries().map((entry) => entry.api);
   }
 
   /**
@@ -610,8 +657,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
 
   /** Moves a layer to `index` (0 is the top), firing `reorder`. */
   move(layer: LayerApi<S, D, T> | string, index: number): void {
-    const entry = typeof layer === 'string' ? this.#byId.get(layer) : this.#byApi.get(layer);
-    if (!entry) throw new RangeError(`devkit: no layer ${String(layer)}`);
+    const entry = this.#find(layer);
     this.#run('api', () => this.#move(entry, index));
   }
 
@@ -633,7 +679,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
 
   set disabled(disabled: boolean) {
     this.#disabled = disabled;
-    this.element.list.disabled = disabled;
+    this.element.layers.disabled = disabled;
     for (const { row } of this.#bars) row.setParentDisabled(disabled);
     this.#render();
   }
@@ -641,7 +687,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
   /**
    * Listens for changes to the stack. Returns a function that removes the listener. Each event
    * says whether the user, the API or a history restore caused it.
-   * @event select - The selection changed, with `{ layer, previous, source }`.
+   * @event select - The selection or the active layer changed, with `{ layer, previous, selection, source }`.
    * @event reorder - A layer moved, with `{ layer, from, to, source }`.
    * @event rename - A layer was renamed, with `{ layer, name, previous, source }`.
    * @event state - A layer's state changed, with `{ layer, key, value, source }`.
@@ -673,7 +719,6 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     }
     this.#bars.length = 0;
     this.#listeners.clear();
-    this.element.removeEventListener(LAYER_ACTION, this.#onAction);
     this.element.remove();
     this.#context.refreshSearch?.();
   }
@@ -685,9 +730,34 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     return types && Object.hasOwn(types, type) ? types[type] : undefined;
   }
 
-  #activation(): 'item' | 'handle' | 'none' {
-    const { reorder } = this.#params;
-    return reorder === false ? 'none' : reorder === 'handle' ? 'handle' : 'item';
+  #find(layer: LayerApi<S, D, T> | string): Entry<S, D, T> {
+    const entry = typeof layer === 'string' ? this.#byId.get(layer) : this.#byApi.get(layer);
+    if (!entry)
+      throw new RangeError(`devkit: no layer ${typeof layer === 'string' ? layer : layer.id}`);
+    return entry;
+  }
+
+  /** The widget: the stack's own options, and its proposals turned into the stack's changes. */
+  #configureWidget(): void {
+    const widget = this.element.layers;
+    const { reorder, title, empty } = this.#params;
+    widget.label = title ?? 'Layers';
+    widget.canReorder = reorder !== false;
+    widget.dragActivation = reorder === 'handle' ? 'handle' : 'item';
+    widget.dropIndicator = this.#params.drop ?? 'line';
+    // Each record says whether its layer can be renamed or removed.
+    widget.canRename = false;
+    widget.canRemove = false;
+    widget.canDrop = (move) => this.#canDrop(move);
+    widget.addEventListener('tp-layers-change', this.#onLayersProposal);
+    widget.addEventListener('tp-value-change', this.#onValueProposal);
+    widget.addEventListener('tp-active-change', this.#onActiveProposal);
+    if (empty !== undefined) {
+      const text = document.createElement('span');
+      text.slot = 'empty';
+      text.textContent = empty;
+      widget.append(text);
+    }
   }
 
   /** The starting stack: the stored structure, if the history has one, merged with the code. */
@@ -738,10 +808,14 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     }
     building = false;
     const first = this.#params.selected;
-    this.#selected =
-      first === null ? null : first !== undefined ? (this.#byId.get(first) ?? null) : null;
-    if (first === undefined)
-      this.#selected = this.#entries.find((entry) => !entry.disabled) ?? null;
+    const active =
+      first === null
+        ? null
+        : first !== undefined
+          ? (this.#byId.get(first) ?? null)
+          : this.#firstEnabled(this.#entries);
+    this.#selected = active;
+    this.#selection = new Set(active ? [active] : []);
     this.#render();
   }
 
@@ -761,7 +835,6 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
       name: params.name ?? type?.title ?? id,
       icon: params.icon ?? type?.icon,
       states,
-      disabled: params.disabled ?? false,
       flags: {
         ...(params.reorder !== undefined ? { reorder: params.reorder } : {}),
         ...(params.rename !== undefined ? { rename: params.rename } : {}),
@@ -842,7 +915,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     return entry;
   }
 
-  #makeBar(items: readonly LayersBarItem<S, D, T>[], host: HTMLElement): void {
+  #makeBar(items: readonly LayersBarItem<S, D, T>[], slot: 'header' | 'footer'): void {
     if (items.length === 0) return;
     const { row } = ContainerApi.inlineRow(
       this.#context,
@@ -891,7 +964,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
       },
     );
     const chunk = new Chunk();
-    host.append(chunk.element);
+    this.element.setBar(slot, chunk.element);
     chunk.add(row, row.metadata);
     this.#context.observe(chunk);
     this.#bars.push({ row, chunk });
@@ -948,6 +1021,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     item: LayersRemoveItem,
     add: (row: ButtonRow, metadata: ButtonRow['metadata']) => void,
   ): { readonly element: HTMLElement } {
+    const removable = () => this.#selectedEntries().filter((entry) => this.#canRemove(entry));
     const row = new ButtonRow(
       this.#context,
       {
@@ -955,15 +1029,14 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
         icon: item.icon ?? trashIcon,
         iconOnly: true,
         onClick: () => {
-          const entry = this.#selected;
-          if (entry && this.#canRemove(entry)) this.#userRemove(entry);
+          const targets = removable();
+          if (targets.length && !this.#disabled)
+            this.#run('user', () => this.#removeEntries(targets));
         },
       },
       { variant: 'ghost', size: 'icon-sm' },
     );
-    this.#barRefresh.push(() =>
-      row.setDisabled(!this.#selected || !this.#canRemove(this.#selected)),
-    );
+    this.#barRefresh.push(() => row.setDisabled(removable().length === 0));
     add(row, row.metadata);
     return row;
   }
@@ -972,7 +1045,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
 
   /**
    * Runs one change: events are held until it ends, then fire in order and `change` once after
-   * them; the list renders once.
+   * them; the widget renders once.
    */
   #run(source: LayersSource, change: () => void): void {
     if (this.#batch) {
@@ -1006,17 +1079,45 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     for (const listener of [...set]) (listener as (event: unknown) => void)(event);
   }
 
-  #select(entry: Entry<S, D, T> | null): void {
-    if (entry === this.#selected) return;
+  #selectedEntries(): Entry<S, D, T>[] {
+    return this.#entries.filter((entry) => this.#selection.has(entry));
+  }
+
+  #firstEnabled(entries: readonly Entry<S, D, T>[]): Entry<S, D, T> | null {
+    return entries.find((entry) => entry.states[ENABLED]) ?? null;
+  }
+
+  /**
+   * Selects `entries` with `active` among them; without an active one, the top selected layer is
+   * active. Fires `select` when either changes.
+   */
+  #setSelection(entries: readonly Entry<S, D, T>[], active: Entry<S, D, T> | null): void {
+    const selection = new Set(entries);
+    if (active) selection.add(active);
+    const next = active ?? this.#entries.find((entry) => selection.has(entry)) ?? null;
     const previous = this.#selected;
-    this.#selected = entry;
-    this.#emit('select', { layer: entry?.api ?? null, previous: previous?.api ?? null });
+    const same =
+      selection.size === this.#selection.size &&
+      [...selection].every((entry) => this.#selection.has(entry));
+    if (next === previous && same) return;
+    this.#selected = next;
+    this.#selection = selection;
+    this.#emit('select', {
+      layer: next?.api ?? null,
+      previous: previous?.api ?? null,
+      selection: this.selection,
+    });
+  }
+
+  #select(entry: Entry<S, D, T> | null): void {
+    this.#setSelection(entry ? [entry] : [], entry);
   }
 
   #rename(entry: Entry<S, D, T>, name: string): void {
     if (name === entry.name) return;
     const previous = entry.name;
     entry.name = name;
+    this.#stale = true;
     this.#emit('rename', { layer: entry.api, name, previous });
     this.#finish(entry, '@name', name);
     this.#context.refreshSearch?.();
@@ -1026,6 +1127,7 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     if (!(key in entry.states)) throw new RangeError(`devkit: no layer state ${key}`);
     if (entry.states[key] === value) return;
     entry.states[key] = value;
+    this.#stale = true;
     this.#emit('state', { layer: entry.api, key: key as 'enabled' | S, value });
     this.#finish(entry, `@${key}`, value);
   }
@@ -1034,24 +1136,57 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
     const from = this.#entries.indexOf(entry);
     const to = Math.max(0, Math.min(index, this.#entries.length - 1));
     if (from === to || from === -1) return;
-    this.#entries.splice(from, 1);
-    this.#entries.splice(to, 0, entry);
-    this.#emit('reorder', { layer: entry.api, from, to });
-    this.#structureChanged();
+    const order = this.#entries.slice();
+    order.splice(from, 1);
+    order.splice(to, 0, entry);
+    this.#reorder(order, [entry]);
   }
 
+  /** Puts the stack in `order`, announcing each of `moving` that changed place. */
+  #reorder(order: Entry<S, D, T>[], moving: readonly Entry<S, D, T>[]): void {
+    const from = new Map(this.#entries.map((entry, index) => [entry, index]));
+    this.#entries = order;
+    this.#stale = true;
+    let moved = false;
+    for (const entry of moving) {
+      const to = order.indexOf(entry);
+      if (from.get(entry) === to) continue;
+      moved = true;
+      this.#emit('reorder', { layer: entry.api, from: from.get(entry)!, to });
+    }
+    if (moved) this.#structureChanged();
+  }
+
+  /**
+   * Removes layers. When the active layer goes, the nearest layer below it (or above, at the
+   * bottom) that stays takes its place, unless other selected layers stay.
+   */
+  #removeEntries(targets: readonly Entry<S, D, T>[]): void {
+    const removing = new Set(targets);
+    if (removing.size === 0) return;
+    const before = this.#entries.slice();
+    const kept = this.#selectedEntries().filter((entry) => !removing.has(entry));
+    let active = this.#selected && !removing.has(this.#selected) ? this.#selected : null;
+    if (!active && kept.length === 0 && this.#selected) {
+      const at = before.indexOf(this.#selected);
+      const staying = (entry: Entry<S, D, T>) => !removing.has(entry) && entry.states[ENABLED];
+      active =
+        before.slice(at).find(staying) ?? before.slice(0, at).reverse().find(staying) ?? null;
+    }
+    for (const entry of before) if (removing.has(entry)) this.#remove(entry);
+    this.#setSelection(kept.length ? kept : active ? [active] : [], active);
+    this.#context.refreshSearch?.();
+  }
+
+  /** Takes one layer out of the stack and destroys it; the selection is the caller's. */
   #remove(entry: Entry<S, D, T>): void {
     const index = this.#entries.indexOf(entry);
     if (index === -1) return;
     this.#entries.splice(index, 1);
-    if (this.#selected === entry) {
-      const next = this.#entries.slice(index).concat(this.#entries.slice(0, index).reverse());
-      this.#select(next.find((candidate) => !candidate.disabled) ?? null);
-    }
+    this.#stale = true;
     this.#destroy(entry);
     this.#emit('remove', { layer: entry.api, index });
     this.#structureChanged();
-    this.#context.refreshSearch?.();
   }
 
   #destroy(entry: Entry<S, D, T>): void {
@@ -1080,9 +1215,13 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
         planned.declared === -1 ? { type: planned.type as T } : declared[planned.declared]!;
       const entry = this.#create(params, planned.id);
       this.#entries.splice(Math.min(index, this.#entries.length), 0, entry);
+      this.#stale = true;
       this.#emit('add', { layer: entry.api });
     });
-    if (!this.#selected) this.#select(this.#entries.find((entry) => !entry.disabled) ?? null);
+    const kept = this.#selectedEntries();
+    const active = this.#selected && this.#byApi.has(this.#selected.api) ? this.#selected : null;
+    if (active) this.#setSelection(kept, active);
+    else this.#select(this.#firstEnabled(this.#entries));
   }
 
   #encode(): string {
@@ -1107,172 +1246,193 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
   // --- User actions ---------------------------------------------------------------------------
 
   #canReorder(entry: Entry<S, D, T>): boolean {
-    return (
-      !entry.disabled &&
-      !this.#disabled &&
-      this.#renaming !== entry.id &&
-      (entry.flags.reorder ?? this.#params.reorder !== false)
-    );
+    return entry.flags.reorder ?? this.#params.reorder !== false;
   }
 
   #canRename(entry: Entry<S, D, T>): boolean {
-    return (
-      !entry.disabled && !this.#disabled && (entry.flags.rename ?? this.#params.rename ?? false)
-    );
+    return entry.flags.rename ?? this.#params.rename ?? false;
   }
 
   #canRemove(entry: Entry<S, D, T>): boolean {
     return (
-      !entry.disabled &&
-      !this.#disabled &&
+      entry.states[ENABLED] === true &&
       (entry.flags.remove ?? this.#params.remove ?? false) &&
       this.#params.allow?.remove?.(entry.api, this) !== false
     );
   }
 
-  #userRemove(entry: Entry<S, D, T>): void {
-    this.#run('user', () => this.#remove(entry));
-    if (this.#selected) this.#focus(this.#selected);
+  /** The widget asks before it offers a place: no groups, and the stack's rules. */
+  #canDrop(move: LayersMove): boolean {
+    const entry = this.#byId.get(move.itemId);
+    if (!entry || move.toParentId !== null || !this.#canReorder(entry)) return false;
+    return this.#params.allow?.move?.(entry.api, move.toIndex, this) !== false;
   }
 
-  #onAction = (event: Event): void => {
-    const detail = (event as CustomEvent<LayerAction & { accepted?: boolean }>).detail;
-    const entry = this.#byId.get(detail.id);
-    if (!entry || this.#disposed) return;
-    event.stopPropagation();
-    switch (detail.action) {
-      case 'select':
-        if (entry.disabled || this.#disabled) return;
-        this.#run('user', () => this.#select(entry));
-        break;
-      case 'step': {
-        const enabled = this.#entries.filter((candidate) => !candidate.disabled);
-        const next = enabled[enabled.indexOf(entry) + detail.delta];
-        if (!next || this.#disabled) return;
-        this.#run('user', () => this.#select(next));
-        this.#focus(next);
-        break;
-      }
-      case 'rename-start':
-        if (!this.#canRename(entry)) return;
-        this.#renaming = entry.id;
-        this.#render();
-        break;
-      case 'rename': {
-        this.#renaming = null;
-        const name = detail.name?.trim();
-        if (name) {
-          const rule = this.#params.allow?.rename?.(entry.api, name, this);
-          if (rule !== false)
-            this.#run('user', () => this.#rename(entry, typeof rule === 'string' ? rule : name));
-        }
-        this.#render();
-        if (detail.keyboard) this.#focus(entry);
-        break;
-      }
-      case 'remove':
-        if (this.#canRemove(entry)) this.#userRemove(entry);
-        break;
-      case 'state':
-        if (entry.disabled || this.#disabled) return;
-        this.#run('user', () => this.#setState(entry, detail.key, detail.value));
-        detail.accepted = true;
-        break;
+  /*
+   * The widget proposes each change the user makes, as one or more events: the records, the
+   * selection and the active layer. The stack refuses every proposal and makes the change itself,
+   * under its rules, once they have all arrived; then it gives the widget its new state.
+   */
+
+  #proposed(): Proposal {
+    if (!this.#proposal) {
+      this.#proposal = {};
+      queueMicrotask(() => this.#applyProposal());
     }
-  };
+    return this.#proposal;
+  }
 
-  /** A drop proposes the new order: assigning it to the list accepts it, as the list asks. */
-  #onProposal = (event: Event): void => {
-    const list = this.element.list;
-    const proposal = event as CustomEvent<{
-      value: readonly Entry<S, D, T>[];
-      cancelled?: boolean;
-      metadata?: { itemId?: unknown; toIndex?: number };
+  #own(event: Event): boolean {
+    // Controls in the bars are the widget's children: their own proposals pass through it.
+    if (event.target !== this.element.layers || this.#disposed) return false;
+    event.preventDefault();
+    return true;
+  }
+
+  #onLayersProposal = (event: Event): void => {
+    if (!this.#own(event)) return;
+    const { detail } = event as CustomEvent<{
+      value: readonly Layer[];
+      reason: string;
+      metadata: { change: LayersChange };
     }>;
-    // Proposals of the rows' own controls reach the list retargeted to it: only its own count.
-    if (event.composedPath()[0] !== list || event.defaultPrevented || proposal.detail.cancelled)
-      return;
-    if (!Array.isArray(proposal.detail.value)) return;
-    const order = proposal.detail.value.map((item) => this.#byId.get(item.id));
-    if (order.some((entry) => !entry) || order.length !== this.#entries.length) return;
-    const itemId = proposal.detail.metadata?.itemId;
-    const entry = typeof itemId === 'string' ? this.#byId.get(itemId) : undefined;
-    if (!entry) return;
-    const to = order.indexOf(entry);
-    if (this.#params.allow?.move?.(entry.api, to, this) === false) return;
-    const next = order as Entry<S, D, T>[];
-    list.value = next;
-    this.#run('user', () => this.#move(entry, to));
+    this.#proposed().change = {
+      change: detail.metadata.change,
+      order: detail.value.map((layer) => layer.id),
+      keyboard: detail.reason === 'keyboard',
+    };
   };
 
-  #focus(entry: Entry<S, D, T>): void {
-    void this.element.list.updateComplete.then(() => {
-      for (const row of this.element.list.renderRoot.querySelectorAll<TweakLayerRow>(
-        TweakLayerRow.tagName,
-      ))
-        if (row.layerId === entry.id) void row.updateComplete.then(() => row.focusName());
+  #onValueProposal = (event: Event): void => {
+    if (!this.#own(event)) return;
+    this.#proposed().value = (event as CustomEvent<{ value: readonly string[] }>).detail.value;
+  };
+
+  #onActiveProposal = (event: Event): void => {
+    if (!this.#own(event)) return;
+    this.#proposed().active = (event as CustomEvent<{ value: string | null }>).detail.value;
+  };
+
+  #applyProposal(): void {
+    const proposal = this.#proposal;
+    this.#proposal = null;
+    if (!proposal || this.#disposed || this.#disabled) {
+      this.#render();
+      return;
+    }
+    const { change } = proposal;
+    let refocus = false;
+    this.#run('user', () => {
+      if (change) {
+        this.#userChange(change.change, change.order);
+        // A removal moves the selection itself; a press that also selects goes on below.
+        if (change.change.action === 'remove') {
+          refocus = change.keyboard;
+          return;
+        }
+      }
+      if (proposal.value === undefined && proposal.active === undefined) return;
+      const entries = (proposal.value ?? this.#selectedEntries().map((entry) => entry.id))
+        .map((id) => this.#byId.get(id))
+        .filter((entry): entry is Entry<S, D, T> => entry !== undefined);
+      const active =
+        proposal.active === undefined
+          ? this.#selected
+          : proposal.active === null
+            ? null
+            : (this.#byId.get(proposal.active) ?? null);
+      this.#setSelection(
+        entries,
+        active && entries.includes(active) ? active : (entries[0] ?? null),
+      );
     });
+    // The removed row had focus: it goes to the layer that took its place.
+    const target = this.#selected;
+    if (refocus && target) {
+      const widget = this.element.layers;
+      void widget.updateComplete.then(() => widget.focusLayer(target.id));
+    }
+  }
+
+  #userChange(change: LayersChange, order: readonly string[]): void {
+    switch (change.action) {
+      case 'move': {
+        const next = order.map((id) => this.#byId.get(id));
+        if (next.length !== this.#entries.length || next.some((entry) => !entry)) return;
+        const entries = next as Entry<S, D, T>[];
+        const moving = change.ids
+          .map((id) => this.#byId.get(id))
+          .filter((entry): entry is Entry<S, D, T> => entry !== undefined);
+        const refused = moving.some(
+          (entry) =>
+            !this.#canReorder(entry) ||
+            this.#params.allow?.move?.(entry.api, entries.indexOf(entry), this) === false,
+        );
+        if (!refused) this.#reorder(entries, moving);
+        return;
+      }
+      case 'rename': {
+        const entry = this.#byId.get(change.id);
+        if (!entry || !this.#canRename(entry)) return;
+        const rule = this.#params.allow?.rename?.(entry.api, change.label, this);
+        if (rule === false) return;
+        const name = (typeof rule === 'string' ? rule : change.label).trim();
+        if (name) this.#rename(entry, name);
+        // A refused or corrected name shows again in the row.
+        this.#stale = true;
+        return;
+      }
+      case 'state':
+        for (const id of change.ids) {
+          const entry = this.#byId.get(id);
+          if (entry && change.name in entry.states)
+            this.#setState(entry, change.name, change.value === 'true');
+        }
+        return;
+      case 'remove':
+        this.#removeEntries(
+          change.ids
+            .map((id) => this.#byId.get(id))
+            .filter((entry): entry is Entry<S, D, T> => !!entry && this.#canRemove(entry)),
+        );
+        return;
+      default:
+        // Adding, duplicating and grouping go through the stack's own API.
+        return;
+    }
   }
 
   // --- Rendering ------------------------------------------------------------------------------
 
-  #configureList(): void {
-    const list = this.element.list as unknown as {
-      label: string;
-      activation: 'item' | 'handle';
-      getItemId: (entry: Entry<S, D, T>) => string;
-      getItemLabel: (entry: Entry<S, D, T>) => string;
-      getItemOptions: (entry: Entry<S, D, T>) => { disabled: { draggable: boolean } };
-      isItemSelected: (entry: Entry<S, D, T>) => boolean;
-      renderItem: (entry: Entry<S, D, T>) => TemplateResult;
-      addEventListener: HTMLElement['addEventListener'];
+  #record(entry: Entry<S, D, T>): Layer {
+    return {
+      id: entry.id,
+      label: entry.name,
+      ...(entry.icon ? { icon: entry.icon } : {}),
+      states: this.#states.map((state): LayerState => ({
+        name: state.key,
+        label: state.label,
+        value: entry.states[state.key] ? 'true' : 'false',
+        values: state.values,
+        scope: state.scope,
+      })),
+      canRename: this.#canRename(entry),
+      canRemove: this.#canRemove(entry),
     };
-    list.label = this.#params.title ?? 'Layers';
-    list.activation = this.#activation() === 'handle' ? 'handle' : 'item';
-    list.getItemId = (entry) => entry.id;
-    list.getItemLabel = (entry) => entry.name;
-    list.getItemOptions = (entry) => ({ disabled: { draggable: !this.#canReorder(entry) } });
-    list.isItemSelected = (entry) => entry === this.#selected;
-    list.renderItem = (entry) => this.#row(entry);
-    list.addEventListener('tp-value-change', this.#onProposal);
-  }
-
-  #row(entry: Entry<S, D, T>): TemplateResult {
-    const muted = this.#states.some((state) => state.mutes && !entry.states[state.key]);
-    const tabStop = this.#selected ?? this.#entries.find((candidate) => !candidate.disabled);
-    return html`<tweak-layer-row
-        .layerId=${entry.id}
-        .name=${entry.name}
-        .icon=${entry.icon}
-        .reserveIcon=${this.element.hasIcons}
-        .trailing=${this.#toggles}
-        .muted=${muted}
-        .disabled=${entry.disabled}
-        .renaming=${this.#renaming === entry.id}
-        .focusable=${entry === tabStop}
-      ></tweak-layer-row
-      >${
-        this.#toggles
-          ? html`<tweak-layer-states
-              slot="actions"
-              .layerId=${entry.id}
-              .states=${this.#states}
-              .values=${{ ...entry.states }}
-              .disabled=${entry.disabled || this.#disabled}
-            ></tweak-layer-states>`
-          : nothing
-      }`;
   }
 
   #render(): void {
     if (this.#batch || this.#disposed) return;
-    const element = this.element;
-    element.hasIcons = this.#entries.some((entry) => entry.icon);
-    const list = element.list as unknown as { value: readonly Entry<S, D, T>[] };
-    list.value = [...this.#entries];
-    element.list.requestUpdate();
+    const widget = this.element.layers;
+    // The records change only with the layers; a new selection keeps them.
+    if (this.#stale || widget.layers.length !== this.#entries.length) {
+      this.#stale = false;
+      widget.layers = this.#entries.map((entry) => this.#record(entry));
+    }
+    widget.value = this.#selectedEntries().map((entry) => entry.id);
+    widget.active = this.#selected?.id ?? null;
     for (const entry of this.#entries) if (entry.page) entry.page.hidden = entry !== this.#selected;
-    element.panels.hidden = !this.#selected?.page;
+    this.element.panels.hidden = !this.#selected?.page;
     for (const refresh of this.#barRefresh) refresh();
   }
 
@@ -1302,19 +1462,16 @@ export class LayersApi<S extends string = never, D = unknown, T extends string =
       },
       setIcon: (layer, icon) => {
         entry(layer).icon = icon;
+        this.#stale = true;
         this.#render();
       },
       setState: (layer, key, value) =>
         this.#run('api', () =>
           this.#setState(entry(layer) as unknown as Entry<S, D, T>, key, value),
         ),
-      setDisabled: (layer, disabled) => {
-        entry(layer).disabled = disabled;
-        this.#render();
-      },
       remove: (layer) => {
         const found = this.#byApi.get(layer as unknown as LayerApi<S, D, T>);
-        if (found) this.#run('api', () => this.#remove(found));
+        if (found) this.#run('api', () => this.#removeEntries([found]));
       },
     };
   }

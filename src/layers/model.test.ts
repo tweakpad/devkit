@@ -3,7 +3,6 @@ import {
   declaredIds,
   decodeStructure,
   encodeStructure,
-  moved,
   nextLayerId,
   startingStack,
 } from './model.js';
@@ -72,10 +71,5 @@ describe('layer stack model', () => {
       counter: 4,
     });
     expect(nextLayerId(null, 7, new Set())).toEqual({ id: 'layer-7', counter: 8 });
-  });
-
-  it('moves an item', () => {
-    expect(moved(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a']);
-    expect(moved(['a', 'b', 'c'], 2, 0)).toEqual(['c', 'a', 'b']);
   });
 });

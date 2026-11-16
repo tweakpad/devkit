@@ -3,11 +3,9 @@ import {
   TpButton,
   TpCheckbox,
   TpColorInput,
-  TpDragDropList,
   TpIcon,
   TpMenu,
   TpMenuItem,
-  TpToggle,
   TpInput,
   TpKbd,
   TpSelect,
@@ -17,11 +15,11 @@ import {
   TpTabs,
   TpTooltip,
 } from '@tweakpad/ui';
-import { TpPlot } from '@tweakpad/ui/widgets';
+import { TpLayers, TpPlot } from '@tweakpad/ui/widgets';
 import { TweakFolder } from '../elements/folder.js';
 import { TweakPane } from '../elements/pane.js';
 import { TweakTabPage, TweakTabs } from '../elements/tabs.js';
-import { TweakLayerRow, TweakLayers, TweakLayerStates } from '../elements/layers.js';
+import { TweakLayers } from '../elements/layers.js';
 
 let registered = false;
 
@@ -45,21 +43,12 @@ export function registerElements(): void {
     TpIcon,
     TpTooltip,
     TpPlot,
-    TpDragDropList,
+    TpLayers,
     TpMenu,
     TpMenuItem,
-    TpToggle,
     TpSeparator,
   ])
     defineElement((control as unknown as { tagName: string }).tagName, control);
-  for (const element of [
-    TweakPane,
-    TweakFolder,
-    TweakTabs,
-    TweakTabPage,
-    TweakLayers,
-    TweakLayerRow,
-    TweakLayerStates,
-  ])
+  for (const element of [TweakPane, TweakFolder, TweakTabs, TweakTabPage, TweakLayers])
     if (!customElements.get(element.tagName)) customElements.define(element.tagName, element);
 }

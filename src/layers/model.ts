@@ -107,11 +107,3 @@ export function nextLayerId(
   while (taken.has(id)) id = `${type ?? 'layer'}-${++n}`;
   return { id, counter: n + 1 };
 }
-
-/** `list` with the item at `from` moved to `to`. */
-export function moved<T>(list: readonly T[], from: number, to: number): T[] {
-  const next = list.slice();
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item!);
-  return next;
-}

@@ -1,6 +1,6 @@
-import type { TpDragDropList } from '@tweakpad/ui';
+import type { TpLayers } from '@tweakpad/ui/widgets';
 import { Pane } from '../src/index.js';
-import type { TweakLayerRow, TweakLayers } from '../src/elements/layers.js';
+import type { TweakLayers } from '../src/elements/layers.js';
 
 const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 const frames = async (count: number) => {
@@ -21,7 +21,12 @@ function deep(root: ParentNode, tag: string): HTMLElement[] {
   return found;
 }
 
-/** Layer stacks through real panes: rows, rules, panels, alignment, history and cost. */
+type Row = HTMLElement & { value: string };
+
+/**
+ * Layer stacks through real panes, on the library's Layers widget: the widget's proposals become
+ * the stack's changes under its rules, and the stack's state becomes the widget's.
+ */
 export async function checkLayers(): Promise<string[]> {
   const checks: string[] = [];
   const check = (condition: boolean, message: string): void => {
@@ -41,12 +46,16 @@ export async function checkLayers(): Promise<string[]> {
     panes.push(pane);
     return pane;
   };
-  const rows = (stack: { element: TweakLayers }) =>
-    deep(stack.element, 'tweak-layer-row') as TweakLayerRow[];
+  const widget = (stack: { element: TweakLayers }): TpLayers => stack.element.layers;
+  const rows = (stack: { element: TweakLayers }) => deep(stack.element, 'tp-tree-item') as Row[];
+  const row = (stack: { element: TweakLayers }, id: string) =>
+    rows(stack).find((item) => item.value === id)!;
+  /** The span showing a row's name. */
+  const label = (item: Row) =>
+    [...item.querySelectorAll<HTMLElement>(':scope > span:not([slot])')].at(0)!;
   const settle = async (stack: { element: TweakLayers }) => {
     await stack.element.updateComplete;
-    await stack.element.list.updateComplete;
-    for (const row of rows(stack)) await row.updateComplete;
+    await widget(stack).updateComplete;
     await frames(2);
   };
 
@@ -61,7 +70,11 @@ export async function checkLayers(): Promise<string[]> {
       rename: true,
       remove: true,
       states: [{ key: 'visible', label: 'Visible', default: true, mutes: true }],
-      allow: { move: () => allowMove, remove: () => allowRemove },
+      allow: {
+        move: () => allowMove,
+        remove: () => allowRemove,
+        rename: (_layer, name) => name.slice(0, 8),
+      },
       types: { dot: { title: 'Dot' }, ring: { title: 'Ring' } },
       layers: [
         { id: 'a', name: 'A', controls: (panel) => panel.addBinding(params, 'size') },
@@ -75,40 +88,63 @@ export async function checkLayers(): Promise<string[]> {
     await settle(stack);
     const shownPages = () =>
       [...stack.element.panels.children].filter((page) => !(page as HTMLElement).hidden).length;
-    check(stack.selected?.id === 'a' && shownPages() === 1, 'the top layer starts selected');
-    rows(stack)[1]!.click();
+    check(
+      stack.selected?.id === 'a' && shownPages() === 1 && widget(stack).active === 'a',
+      'the top layer starts active, in the widget too',
+    );
+    check(rows(stack).length === 3, 'the widget shows a row per layer');
+    widget(stack).selectLayers(['b'], 'b');
     await settle(stack);
     check(
       stack.selected?.id === 'b' && shownPages() === 1 && events.at(-1) === 'select:user',
-      'a click selects a layer and shows only its panel',
+      'a selection the widget proposes makes the layer active and shows only its panel',
     );
-    rows(stack)[2]!.click();
+    widget(stack).selectLayers(['c'], 'c');
     await settle(stack);
     check(stack.element.panels.hidden === true, 'a layer without controls shows no panel');
+    widget(stack).selectLayers(['a', 'c'], 'c');
+    await settle(stack);
     check(
-      deep(stack.element, 'tp-list-item').filter((item) => item.hasAttribute('selected')).length ===
-        1,
-      'exactly one row shows as selected',
+      stack.selection.map((layer) => layer.id).join() === 'a,c' && stack.selected?.id === 'c',
+      'several layers can be selected, one of them active',
     );
 
-    // Reorder through the list, as a drop does, and the rule that refuses it.
-    const list = stack.element.list as TpDragDropList<unknown>;
+    // Reorder through the widget, as a drop does, and the rule that refuses it.
     events.length = 0;
-    list.moveItem('c', { index: 0 });
+    widget(stack).moveLayers(['c'], { parentId: null, index: 0 });
     await settle(stack);
     check(
-      stack.layers.map((layer) => layer.id).join() === 'c,a,b' && events.join() === 'reorder:user',
-      'a drop reorders the stack and fires reorder from the user',
+      stack.layers.map((layer) => layer.id).join() === 'c,a,b' &&
+        events.join() === 'reorder:user' &&
+        rows(stack)[0]!.value === 'c',
+      'a move the widget proposes reorders the stack and fires reorder from the user',
     );
     allowMove = false;
-    list.moveItem('c', { index: 2 });
+    check(
+      widget(stack).canDrop?.({
+        itemId: 'c',
+        fromParentId: null,
+        fromIndex: 0,
+        toParentId: null,
+        toIndex: 2,
+      }) === false,
+      'the move rule keeps the widget from offering a place',
+    );
+    widget(stack).moveLayers(['c'], { parentId: null, index: 2 });
     await settle(stack);
     check(
-      stack.layers.map((layer) => layer.id).join() === 'c,a,b',
-      'a drop the move rule refuses goes back',
+      stack.layers.map((layer) => layer.id).join() === 'c,a,b' && rows(stack)[0]!.value === 'c',
+      'a move the rule refuses leaves the stack as it was',
     );
     stack.move('b', 0);
-    check(stack.layers[0]!.id === 'b' && events.at(-1) === 'reorder:api', 'code moves past rules');
+    await settle(stack);
+    check(
+      stack.layers[0]!.id === 'b' &&
+        events.at(-1) === 'reorder:api' &&
+        rows(stack)[0]!.value === 'b',
+      'code moves past rules, and the widget follows',
+    );
+    allowMove = true;
 
     // Rows are the pane's control rows.
     const probe = document.createElement('div');
@@ -116,36 +152,25 @@ export async function checkLayers(): Promise<string[]> {
     stack.element.shadowRoot!.append(probe);
     const controlHeight = parseFloat(getComputedStyle(probe).blockSize);
     probe.remove();
-    const rowHeights = deep(stack.element, 'tp-list-item').map(
-      (item) => item.getBoundingClientRect().height,
-    );
     check(
-      rowHeights.every((height) => Math.abs(height - controlHeight) < 0.5),
+      rows(stack).every(
+        (item) => Math.abs(item.getBoundingClientRect().height - controlHeight) < 0.5,
+      ),
       'layer rows have the height of the pane’s controls',
     );
 
-    // Rename with a double-click.
-    const target = rows(stack).find((row) => row.layerId === 'a')!;
-    const nameRange = document.createRange();
-    nameRange.selectNodeContents(target.renderRoot.querySelector('.label')!);
-    const nameStart = nameRange.getBoundingClientRect().left;
-    target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    // Rename, through the widget's field, and the rule that corrects the name.
+    stack.selected = 'a';
     await settle(stack);
-    const input = target.renderRoot.querySelector('tp-input') as HTMLElement & { value: string };
-    check(input !== null, 'a double-click opens the name for editing');
+    await widget(stack).renameLayer('a');
+    await settle(stack);
+    const input = deep(stack.element, 'tp-input').find((field) =>
+      field.hasAttribute('data-layer-rename'),
+    ) as HTMLElement & { value: string };
+    check(input !== undefined, 'renaming opens a field in the row');
     const field = (input.querySelector('input') ??
       input.shadowRoot?.querySelector('input')) as HTMLInputElement;
-    const copy = input.shadowRoot?.querySelector('[part~="input-copy"]');
-    const fieldStyle = getComputedStyle(field);
-    check(
-      (!copy || getComputedStyle(copy).display === 'none') &&
-        fieldStyle.textAlign === 'start' &&
-        Math.abs(
-          field.getBoundingClientRect().left + parseFloat(fieldStyle.paddingLeft) - nameStart,
-        ) < 0.5,
-      'the rename field offers no copy and starts its text where the name was',
-    );
-    field.value = 'Renamed';
+    field.value = 'Renamed layer';
     field.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     await settle(stack);
     field.dispatchEvent(
@@ -153,31 +178,27 @@ export async function checkLayers(): Promise<string[]> {
     );
     await settle(stack);
     check(
-      stack.get('a')!.name === 'Renamed' && events.at(-1) === 'rename:user',
-      'Enter renames the layer',
+      stack.get('a')!.name === 'Renamed' &&
+        events.at(-1) === 'rename:user' &&
+        label(row(stack, 'a')).textContent?.trim() === 'Renamed',
+      'Enter renames the layer, as the rename rule corrects it',
     );
 
-    // Leaving the field for another control keeps the name and leaves focus there.
-    const other = rows(stack).find((row) => row.layerId === 'c')!;
-    other.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
-    await settle(stack);
-    const elsewhere = document.createElement('input');
-    host.append(elsewhere);
-    elsewhere.focus();
-    await settle(stack);
-    check(
-      !other.renaming && document.activeElement === elsewhere,
-      'a rename ended by focusing elsewhere leaves focus there',
-    );
-    elsewhere.remove();
-
-    // States mute the row.
+    // States dim the row, and a disabled layer is frozen.
     stack.get('a')!.setState('visible', false);
     await settle(stack);
     check(
-      rows(stack).find((row) => row.layerId === 'a')!.muted && events.at(-1) === 'state:api',
+      label(row(stack, 'a')).hasAttribute('data-dimmed') && events.at(-1) === 'state:api',
       'a muting state off dims the row',
     );
+    stack.get('b')!.setState('enabled', false);
+    await settle(stack);
+    check(
+      widget(stack).getLayerState('b', 'enabled') === 'false' &&
+        row(stack, 'b').getAttribute('aria-disabled') === 'true',
+      'a disabled layer is frozen in the widget',
+    );
+    stack.get('b')!.setState('enabled', true);
 
     // Remove, and the rule that refuses it.
     const removeButton = deep(stack.element, 'tp-button').find(
@@ -196,13 +217,33 @@ export async function checkLayers(): Promise<string[]> {
     await settle(stack);
     check(
       !stack.get('b') && stack.selected !== null && events.includes('remove:user'),
-      'the remove action removes the selected layer and selects a neighbour',
+      'the remove action removes the selected layer and makes a neighbour active',
+    );
+
+    // Delete on a focused row removes the selection, and focus goes to the layer in its place.
+    stack.add({ type: 'dot' });
+    stack.add({ type: 'ring' });
+    await settle(stack);
+    widget(stack).selectLayers(['dot-1', 'ring-2'], 'dot-1');
+    await settle(stack);
+    await widget(stack).focusLayer('dot-1');
+    row(stack, 'dot-1').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, composed: true }),
+    );
+    await settle(stack);
+    const focused = deep(stack.element, 'tp-tree-item').find((item) => item.matches(':focus'));
+    check(
+      !stack.get('dot-1') &&
+        !stack.get('ring-2') &&
+        stack.selected !== null &&
+        (focused as Row | undefined)?.value === stack.selected.id,
+      'Delete removes the selected layers and focuses the layer that takes their place',
     );
 
     // Adding from types.
     const added = stack.add({ type: 'dot', select: true });
     check(
-      added.id === 'dot-1' && added.name === 'Dot' && stack.selected === added,
+      added.id === 'dot-3' && added.name === 'Dot' && stack.selected === added,
       'an added layer takes its type defaults and an id from its type',
     );
     pane.dispose();
@@ -214,9 +255,7 @@ export async function checkLayers(): Promise<string[]> {
       layers: [{ name: 'With icon', icon }, { name: 'Without icon' }, { name: 'Also', icon }],
     });
     await settle(mixed);
-    const starts = rows(mixed).map(
-      (row) => row.renderRoot.querySelector('.label')!.getBoundingClientRect().left,
-    );
+    const starts = rows(mixed).map((item) => label(item).getBoundingClientRect().left);
     check(
       starts.length === 3 && starts.every((left) => Math.abs(left - starts[0]!) < 0.5),
       'names line up when only some layers have icons',
@@ -233,11 +272,10 @@ export async function checkLayers(): Promise<string[]> {
         types: {
           spot: {
             title: 'Spot',
-            controls: (panel, layer) => {
+            controls: (panel) => {
               const value = { a: 1 };
               values.push(value);
               handles.push(panel.addBinding(value, 'a', { min: 0, max: 10 }));
-              void layer;
             },
           },
         },
@@ -271,9 +309,11 @@ export async function checkLayers(): Promise<string[]> {
     after.get('spot-1')!.remove();
     const v1 = second.history!.versions.find((version) => version.label === 'v1')!;
     second.history!.restore(v1.id);
+    await settle(after);
     check(
       after.get('spot-1')?.name === 'Key light' &&
-        restoredEvents.join() === 'remove:api,add:restore',
+        restoredEvents.join() === 'remove:api,add:restore' &&
+        rows(after).length === 2,
       'restoring a version re-creates a removed layer from its type',
     );
     second.dispose();

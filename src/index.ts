@@ -82,4 +82,4 @@ export { registerElements } from './controls/register.js';
 export { TweakPane, type PaneAnchor } from './elements/pane.js';
 export { TweakFolder } from './elements/folder.js';
 export { TweakTabs, TweakTabPage } from './elements/tabs.js';
-export { TweakLayers, TweakLayerRow, TweakLayerStates } from './elements/layers.js';
+export { TweakLayers } from './elements/layers.js';

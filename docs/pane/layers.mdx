@@ -28,8 +28,10 @@ pane.addLayers({
 ## Usage
 
 `addLayers` adds a stack of layers: an ordered list the user selects from, reorders by dragging and
-toggles, as in an image editor. Each layer can carry a panel of controls, shown below the list while
-the layer is selected, the way a tab page shows its controls. The stack assumes nothing about what a
+toggles, as in an image editor. The list is the library's
+Layers widget, `tp-layers`; devkit gives it typed states, panels,
+types to add, rules and history. Each layer can carry a panel of controls, shown below the list while
+the layer is active, the way a tab page shows its controls. The stack assumes nothing about what a
 layer is: it reports every change through `on()`, and your application decides what the order, the
 states and the selection mean.
 
@@ -47,12 +49,18 @@ stack.on('select', ({ layer }) => editor.select(layer?.data));`}
 
 ### States
 
-Every layer has an `enabled` state, on by default; a disabled layer's name shows dimmed. `states`
-adds more, such as visible or locked. A state with an `icon` gets a toggle at the end of each row,
-in declaration order, with `offIcon` while off. A state without one shows nothing in the row, and
-code or a bar action changes it; `enabled` has no icon unless the `enabled` option gives it one.
-`display` shows a toggle only while its state is on or off, keeping its place so the other toggles
-line up, and `mutes` dims the name while the state is off.
+Every layer has an `enabled` state, on by default. A disabled layer is frozen: it shows dimmed,
+and the user can neither select, move, rename nor remove it, nor change its other states. `states`
+adds more, such as visible or locked. A state with an `icon` gets a control at the end of each row,
+in declaration order, showing `offIcon` while off; a press switches it. A state without one shows
+nothing in the row, and code or a bar action changes it; `enabled` has no control unless the
+`enabled` option gives it an icon.
+
+`display` shows a control at rest only while its state is on or off; the rest of the time it keeps
+its place, so the other controls line up, and shows faded while the row is hovered or has focus. A
+state with no `offIcon` works the same way while off, since one icon cannot show both values.
+`mutes` dims the name while the state is off, and `scope: 'selection'` makes a press on a selected
+row change every selected layer.
 
 <Preview
   title="States"
@@ -101,13 +109,21 @@ pane.addLayers({
 });`}
 />
 
+### Selection
+
+A press selects a layer and makes it the active one, whose panel shows. Shift extends the
+selection and Control or Command adds or removes a layer, so several layers can be selected at
+once; `selection` lists them, and the `remove` action and Delete remove them all. `select` fires
+when the selection or the active layer changes, with both.
+
 ### Reordering, renaming and removing
 
-`reorder` sets how the user moves layers: by dragging the whole row (the default), only its grip
-(`'handle'`), or not at all (`false`). The grip also moves a row from the keyboard; on whole-row
-stacks it shows while it has keyboard focus. `rename` lets the user rename a layer with a
-double-click or F2, and `remove` lets them remove it with Delete or a `remove` item in a bar. Each
-layer can override all three, for example to keep a background at the bottom.
+`reorder` sets how the user moves layers: by dragging the whole row (the default), only its handle
+(`'handle'`), or not at all (`false`); dragging a selected layer moves the whole selection. `drop:
+'displace'` makes the rows open a gap where the layer lands, in place of a line. `rename` lets the
+user rename a layer with a double-click or F2, and `remove` lets them remove the selected layers
+with Delete or a `remove` item in a bar. Each layer can override all three, for example to keep a
+background at the bottom.
 
 <Preview
   title="Reordering, renaming and removing"
@@ -131,7 +147,7 @@ pane.addLayers({
 ### Panels
 
 `controls(panel, layer)` builds a layer's panel: add bindings, folders, rows or tabs to `panel` as
-to the pane. It runs once, when the layer is created, and only the selected layer's panel shows;
+to the pane. It runs once, when the layer is created, and only the active layer's panel shows;
 the others sleep like hidden tab pages. A layer without `controls` has no panel, so a stack can also
 be a plain ordering list for an editor that shows its own properties.
 
@@ -142,7 +158,7 @@ handlers can reach it from `layer.data`.
 
 `types` declares the kinds of layers the user can add: a title, an icon, default states, the panel's
 `controls` and a `data` function that makes each new layer's data. An `add` item in a bar opens a
-menu of the types, or adds directly when there is only one. A new layer goes above the selected one,
+menu of the types, or adds directly when there is only one. A new layer goes above the active one,
 takes its type's defaults and an id like `sun-1`, and is selected. A type with `menu: false` is left
 out of the menu but can still be declared and added from code.
 
@@ -178,8 +194,8 @@ pane.addLayers({
 
 `allow` holds your rules for the user's actions: whether a type may be added, a layer dropped at an
 index, renamed to a name or removed. They can depend on anything, such as the layers already in the
-stack. Refused types show dimmed in the add menu, a refused drop goes back, and `rename` can return a
-corrected name. The rules apply to the user only: code that calls `add()`, `move()` or `remove()`
+stack. Refused types show dimmed in the add menu, a refused place is never offered while dragging,
+and `rename` can return a corrected name. The rules apply to the user only: code that calls `add()`, `move()` or `remove()`
 does what it asks.
 
 <Code
@@ -202,7 +218,8 @@ does what it asks.
 `header` and `footer` are rows above and below the list, for actions on the stack. They take the
 items of a row (bindings and buttons, whose `onClick` also receives the stack), a `menu` of entries,
 and the built-in `add` and `remove` actions. Bindings in a bar can follow the selected layer by
-reading and writing through it.
+reading and writing through it. `empty` sets a text shown in the list's place once every layer is
+gone.
 
 <Preview
   title="Header and footer"
@@ -256,14 +273,17 @@ change in code.
 
 ## Keyboard
 
-The selected layer's name is the list's tab stop; each row's toggles and the grip are separate tab
-stops.
+The list is one tab stop; the state controls in each row are tab stops of their own.
 
-| Keys                  | Action                                     |
-| --------------------- | ------------------------------------------ |
-| <Keys keys="ArrowUp" />, <Keys keys="ArrowDown" /> | Select the layer above or below |
-| <Keys keys="Enter" />, <Keys keys="Space" /> | Select the focused layer |
-| <Keys keys="F2" />    | Rename the layer, when allowed             |
-| <Keys keys="Delete" /> | Remove the layer, when allowed            |
+| Keys | Action |
+| --- | --- |
+| <Keys keys="ArrowUp" />, <Keys keys="ArrowDown" /> | Select the layer above or below and make it active |
+| <Keys keys="shift+ArrowUp" />, <Keys keys="shift+ArrowDown" /> | Extend the selection |
+| <Keys keys="Home" />, <Keys keys="End" /> | Select the top or bottom layer |
+| <Keys keys="mod+a" /> | Select every layer |
+| <Keys keys="Space" /> | Add the focused layer to the selection, or take it out |
+| <Keys keys="F2" /> | Rename the layer, when allowed |
 | <Keys keys="Enter" />, <Keys keys="Escape" /> | While renaming: keep or cancel the new name |
-| <Keys keys="Space" /> on the grip, then arrows | Move the layer; Space drops it, Escape cancels |
+| <Keys keys="Delete" />, <Keys keys="Backspace" /> | Remove the selected layers, when allowed |
+| <Keys keys="alt+ArrowUp" />, <Keys keys="alt+ArrowDown" /> | Move the selected layers one place up or down |
+| <Keys keys="mod+Enter" /> | Pick up the layer to move it with the arrows; Enter drops it, Escape puts it back |

@@ -10,8 +10,6 @@
     "TweakFolder",
     "TweakTabs",
     "TweakTabPage",
-    "TweakLayers",
-    "TweakLayerRow",
-    "TweakLayerStates"
+    "TweakLayers"
   ]
 }
