@@ -60,7 +60,7 @@
     "build-storybook": "npm run docs:build && storybook build"
   },
   "dependencies": {
-    "@tweakpad/ui": "^0.5.1"
+    "@tweakpad/ui": "^0.5.2"
   },
   "peerDependencies": {
     "lit": "^3.3.0"
