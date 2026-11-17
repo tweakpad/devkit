@@ -1,5 +1,16 @@
 # @tweakpad/devkit
 
+## 0.0.3
+
+### Patch Changes
+
+- a4a06b7: Every line devkit draws (the pane's edge, the line under its title bar, folder guides, the vertical tab group's outline and layer stack dividers) uses the new `--tweak-border-color`, the library's border dimmed to 25%, so the pane groups its controls without boxing them in. Separators follow it through `--tweak-separator-color`.
+- 06b934f: Layer stacks are built on the library's Layers widget (`tp-layers`, `@tweakpad/ui` 0.5.2). The stack keeps its typed states, panels, types, rules, bars and history, and gains the widget's interactions: several layers can be selected with Shift and Control or Command (`LayersApi.selection`, and `selection` on the `select` event), Delete and the `remove` action remove the whole selection, Alt+Arrow keys move it, and a dragged selection moves together. New options: `drop: 'displace'`, `empty`, and a state's `scope: 'selection'`.
+
+  Breaking: a layer's `enabled: false` now freezes it as the widget does (dimmed, and not selectable, movable, renamable or removable), replacing the separate `disabled` option and `LayerApi.disabled`, which are removed. A state without `offIcon` shows its control only while on, and faded on hover while off. `TweakLayerRow` and `TweakLayerStates` are removed, and devkit no longer registers `tp-drag-drop-list` or `tp-toggle`.
+
+- a4a06b7: Separators: `addSeparator()` draws the library's Separator between rows, as a faint rule at half the width, centered, with section spacing around it, on panes, folders, tab pages and layer panels; it hides while the pane is searched.
+
 ## 0.0.2
 
 ### Patch Changes
