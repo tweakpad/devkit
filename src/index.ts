@@ -17,7 +17,13 @@ export { ButtonApi, type ButtonParams } from './api/buttons.js';
 export { SeparatorApi, type SeparatorParams } from './api/separator.js';
 export { GraphApi } from './api/graph.js';
 export { StatApi, StatsApi, StatsGroupApi } from './api/stats.js';
-export type { StatParams, StatPartParams, StatsGroupParams, StatsParams } from './stats/types.js';
+export type {
+  StatParams,
+  StatPartParams,
+  StatsCommonParams,
+  StatsGroupParams,
+  StatsParams,
+} from './stats/types.js';
 export type { TrendIcon, TrendOption, TrendParams, TrendPreset } from './core/trend.js';
 export type { StatFormat, StatValue } from './stats/format.js';
 export type {
@@ -47,6 +53,10 @@ export {
   type InlineItem,
   type InlineBindingItem,
   type InlineButtonItem,
+  type InlineSize,
+  type InlineItemApi,
+  type InlineApis,
+  type ValidatedInlineItems,
 } from './api/inline.js';
 export {
   LayerApi,

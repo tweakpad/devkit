@@ -75,7 +75,8 @@ export interface StatsGroupParams {
   hidden?: boolean;
 }
 
-interface StatsCommonParams {
+/** The options of `addStats()` that apply whether it takes titled `groups` or untitled `stats`. */
+export interface StatsCommonParams {
   /** The block's name in search. The block renders no heading of its own: put it in a folder for one. */
   title?: string;
   /** The block's name, in place of the title. */
@@ -93,8 +94,8 @@ interface StatsCommonParams {
    */
   layout?: 'groups' | 'matrix';
   /**
-   * Group columns: a number for exactly that many when they fit, or a range. Groups wrap to fewer
-   * columns only when even their values alone do not fit.
+   * Group columns: a number for exactly that many, or a range. Within it, groups take as many
+   * columns as have room for their labels.
    * @default { min: 1, max: groups.length }
    */
   columns?: number | { min?: number; max?: number };

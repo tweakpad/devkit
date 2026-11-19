@@ -1,0 +1,7 @@
+interface:
+  display_name: 'devkit Docs'
+  short_description: 'Keep each devkit page single-sourced, structured and linked to its types'
+  default_prompt: 'Use $devkit-docs to write, change or review the requested devkit documentation page, keeping the mandatory structure, the writing style shared with @tweakpad/ui, the generated API Reference and type cards, and both renderings checked in Chrome.'
+
+policy:
+  allow_implicit_invocation: true

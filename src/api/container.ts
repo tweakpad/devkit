@@ -207,8 +207,9 @@ export class ContainerApi {
 
   /**
    * Adds a block of stats: live values in titled groups set side by side, condensed for a glance.
-   * The block fits its width: labels shorten, then hide (showing on hover), before groups wrap to
-   * fewer columns. Values are read at `interval` while the block is visible.
+   * The block fits its width: groups stack once side by side they would lose their labels, and a
+   * column hides its labels (showing them on hover) before any value is cut. Values are read at
+   * `interval` while the block is visible.
    */
   addStats(params: StatsParams): StatsApi {
     if (this.inline) throw new Error('devkit: stats cannot go in a row');

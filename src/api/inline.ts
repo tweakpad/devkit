@@ -5,7 +5,8 @@ import type { PaneContext, Row } from './context.js';
 import type { SearchMetadata } from '../core/search.js';
 import { SearchableRow } from './rows.js';
 
-interface InlineSize {
+/** How wide an item of an inline row is, against the row's other items. */
+export interface InlineSize {
   /**
    * Share of the row's free space, relative to the other items, or `'auto'` for the item's own
    * width, e.g. for a Reset button.
@@ -32,6 +33,10 @@ export type InlineButtonItem = ButtonParams &
   };
 /** One item of an inline row, a binding or a button as its `type` says. */
 export type InlineItem = InlineBindingItem | InlineButtonItem;
+/**
+ * The handle an inline row gives for one item: a `ButtonApi` for a button, a `BindingApi` of the
+ * bound property's type for a binding.
+ */
 export type InlineItemApi<T extends InlineItem> = T extends { type: 'button' }
   ? ButtonApi
   : T extends { target: infer O; key: infer K }
@@ -39,9 +44,11 @@ export type InlineItemApi<T extends InlineItem> = T extends { type: 'button' }
       ? BindingApi<O[K]>
       : never
     : never;
+/** The handles of an inline row's items, in the order of its `items`. */
 export type InlineApis<T extends readonly InlineItem[]> = {
   readonly [I in keyof T]: InlineItemApi<T[I]>;
 };
+/** The items of `addRow()` as the compiler checks them: a binding's `key` must be a property of its `target`. */
 export type ValidatedInlineItems<T extends readonly InlineItem[]> = {
   readonly [I in keyof T]: T[I] extends { target: infer O; key: PropertyKey }
     ? T[I] & { key: keyof O }

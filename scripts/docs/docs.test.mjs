@@ -111,13 +111,28 @@ describe('documentation pages', () => {
 
   // Reading the declarations runs the TypeScript compiler: seconds, more on a busy machine.
   it(
-    'build into docs.json with a described API Reference for every page',
+    'build into docs.json with a described API Reference for every page, and its type cards',
     { timeout: 30_000 },
     () => {
-      const index = buildIndex();
+      const { index, types } = buildIndex();
       expect(index.pages.map((page) => page.id)).toEqual(pages.map((page) => page.id));
       for (const page of index.pages)
         for (const name of page.api) expect(index.api[name], `${page.id}: ${name}`).toBeDefined();
+      // A type name in a row opens its card: the card says what it is and how to import it.
+      const options = types.elements.Pane?.PaneOptions;
+      expect(options, 'Pane links PaneOptions').toBeDefined();
+      expect(types.symbols[options]).toMatchObject({
+        name: 'PaneOptions',
+        kind: 'interface',
+        importFrom: '@tweakpad/devkit',
+      });
+      expect(types.symbols[options].documentation).not.toBe('');
+      // Every card of the package (not the platform's) can be imported and is described.
+      for (const symbol of Object.values(types.symbols))
+        if (!symbol.platform) {
+          expect(symbol.importFrom, symbol.name).toBe('@tweakpad/devkit');
+          expect(symbol.documentation, symbol.name).not.toBe('');
+        }
     },
   );
 

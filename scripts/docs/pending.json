@@ -1,5 +1,5 @@
 {
-  "$comment": "Exports no documentation page lists in its api yet. Each one is either internal plumbing exported for advanced use or a page still to write; documenting one means removing it here.",
+  "$comment": "Exports no documentation page lists in its api yet. Each one is either internal plumbing exported for advanced use (some only so the type cards a signature opens can name their import), or a page still to write; documenting one means removing it here.",
   "exports": [
     "ContainerApi",
     "Scheduler",
@@ -10,6 +10,11 @@
     "TweakFolder",
     "TweakTabs",
     "TweakTabPage",
-    "TweakLayers"
+    "TweakLayers",
+    "StatsCommonParams",
+    "InlineSize",
+    "InlineItemApi",
+    "InlineApis",
+    "ValidatedInlineItems"
   ]
 }

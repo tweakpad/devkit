@@ -257,7 +257,14 @@ export function createApiReader(entry, tsconfig) {
     return rows;
   }
 
-  return { read, exported: () => [...exports.keys()] };
+  return {
+    read,
+    exported: () => [...exports.keys()],
+    // The compiler state the type cards (`api-types.mjs`) read from, so the program is built once.
+    program,
+    checker,
+    exports,
+  };
 }
 
 function withoutUndefined(row) {

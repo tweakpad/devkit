@@ -35,7 +35,8 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
-    "./docs.json": "./dist/docs.json"
+    "./docs.json": "./dist/docs.json",
+    "./api-types.json": "./dist/api-types.json"
   },
   "files": [
     "dist",
