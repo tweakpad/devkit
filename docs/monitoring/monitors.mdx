@@ -2,7 +2,7 @@
 title: Monitors
 description: Read-only views of a value your application supplies, as text or as a graph of its recent history.
 symbol: "pane.addBinding(target, key, { view: 'monitor' })"
-api: [MonitorOptions]
+api: [MonitorOptions, TrendOption, TrendParams]
 ---
 
 <Preview
@@ -46,7 +46,8 @@ visibility, refresh and disposal as any other control. Presentation options go u
 
 A monitor presents the values your application puts in the property; it measures nothing itself.
 For several series in one graph, paging or overlays, use `addGraph`; for frame rate, frame time
-and memory measured for you, use `addPerformanceMonitor`.
+and memory measured for you, use `addPerformanceMonitor`; for many values at a glance, in groups
+condensed to fit the pane, use `addStats`.
 
 ### Text
 
@@ -64,6 +65,55 @@ pane.addBinding(net, 'latency', { label: 'Latency ms', view: 'monitor', precisio
 pane.addBinding(net, 'status', { view: 'monitor' });
 pane.addBinding(net, 'region', { view: 'monitor' });`}
 />
+
+### Change chevrons
+
+`monitor.trend` shows the direction of a text monitor's value change, with the same presets
+(`'ticker'`, `'steady'`, `'flash'`, `'tint'`) and options as `addStats`: a rise green and a fall
+red, as a ticker shows it. `better: 'lower'` swaps the colors, for a value where less is better.
+Each sample of the binding's
+`interval` is one reading: with no change since the last reading, the chevron clears.
+
+<Preview
+  title="Change chevrons"
+  code={`<div id="monitors-trend"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+const stats = { fps: 60, calls: 270 };
+setInterval(() => {
+  stats.fps = 57 + Math.random() * 6;
+  stats.calls = 260 + Math.round(Math.random() * 20);
+}, 250);
+const pane = new Pane({ container: document.getElementById('monitors-trend'), title: 'Renderer' });
+pane.addBinding(stats, 'fps', {
+  label: 'fps, instant',
+  view: 'monitor',
+  interval: 250,
+  precision: 0,
+  monitor: { trend: 'ticker' },
+});
+pane.addBinding(stats, 'fps', {
+  label: 'fps, steady',
+  view: 'monitor',
+  interval: 250,
+  precision: 0,
+  monitor: { trend: 'steady' },
+});
+pane.addBinding(stats, 'calls', {
+  label: 'draw calls, steady',
+  view: 'monitor',
+  interval: 250,
+  precision: 0,
+  monitor: { trend: 'steady' },
+});`}
+/>
+
+`samples` steadies the chevron: it compares averages of the last readings and shows a chevron only
+when their difference stands out from the readings' own noise. `deviations` and `threshold` work as
+they do for stats. The value always shows at once: only the chevron is steadied. A monitor with a trend
+takes every sample, changed or not, so its chevron can clear when the value stops moving. Sample about
+as often as the value changes: a monitor read every frame of a value that changes four times a
+second sees mostly unchanged readings, so its chevron clears almost at once. Set the binding's
+`interval` to match, as in the example above. The graph view has no chevron.
 
 ### Graph
 

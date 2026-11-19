@@ -136,6 +136,80 @@ export async function checkMonitorBindings(): Promise<string[]> {
       scheduler.activeCount === 0 && pane.filter('amount') === 0,
       'normal binding and row disposal release monitor sampling and search ownership',
     );
+
+    // Change chevrons: the same trend as stats; each sample is one reading.
+    pane.filter('');
+    const meter = { fps: 60 };
+    const steadyMeter = { fps: 60 };
+    const fps = pane.addBinding(meter, 'fps', {
+      view: 'monitor',
+      interval: -1,
+      precision: 0,
+      monitor: { trend: 'ticker' },
+    });
+    const steadyFps = pane.addBinding(steadyMeter, 'fps', {
+      label: 'steady fps',
+      view: 'monitor',
+      interval: -1,
+      precision: 0,
+      monitor: { trend: { better: 'higher', samples: 2 } },
+    });
+    const mark = (binding: { element: HTMLElement }) =>
+      binding.element.querySelector<SVGElement>('.value > .trend');
+    for (let i = 0; i < 60 && !(mark(fps) && mark(steadyFps)); i++) await frame();
+    check(
+      mark(fps) !== null,
+      'rows added to a pane emptied while searching mount once the search is cleared',
+    );
+    const read = async (value: number) => {
+      meter.fps = value;
+      steadyMeter.fps = value;
+      fps.refresh();
+      steadyFps.refresh();
+      await frame();
+    };
+    check(
+      mark(fps) !== null && !mark(fps)!.dataset.trend,
+      'a monitor with a trend has a blank chevron before the value',
+    );
+    await read(62);
+    check(mark(fps)!.dataset.trend === 'up-better', 'a monitor trend turns like a stat trend');
+    await read(62);
+    check(!mark(fps)!.dataset.trend, 'an unchanged monitor sample clears the chevron');
+    await read(61.8);
+    check(
+      fps.element.querySelector('.value')!.textContent === '62' && !mark(fps)!.dataset.trend,
+      'a change below the monitor precision turns no chevron',
+    );
+    // Steady readings so far 60 62 62 62: a clear rise, then a dip.
+    for (const value of [70, 70]) await read(value);
+    check(mark(steadyFps)!.dataset.trend === 'up-better', 'a steady monitor turns on a clear rise');
+    await read(66);
+    check(
+      mark(fps)!.dataset.trend === 'down-worse' &&
+        !mark(steadyFps)!.dataset.trend?.startsWith('down'),
+      'with samples, a dip turns no monitor chevron down',
+    );
+    const tinted = { fps: 60 };
+    const tintedFps = pane.addBinding(tinted, 'fps', {
+      label: 'tinted fps',
+      view: 'monitor',
+      interval: -1,
+      precision: 0,
+      monitor: { trend: { icon: false, color: true } },
+    });
+    const tintedValue = () => tintedFps.element.querySelector<HTMLElement>('.value');
+    for (let i = 0; i < 60 && !tintedValue(); i++) await frame();
+    tinted.fps = 70;
+    tintedFps.refresh();
+    await frame();
+    check(
+      !tintedFps.element.querySelector('.trend') && tintedValue()!.dataset.trend === 'up-better',
+      'a monitor can show its trend by color alone',
+    );
+    tintedFps.dispose();
+    fps.dispose();
+    steadyFps.dispose();
     return checks;
   } finally {
     pane.dispose();

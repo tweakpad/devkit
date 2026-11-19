@@ -3,6 +3,7 @@ import type { ControlView } from './library-view.js';
 import { GraphMonitorView } from '../monitors/graph-monitor.js';
 import { TextMonitorView } from '../monitors/text-monitor.js';
 import type { GraphGuide } from '../graphs/types.js';
+import { Trend, type TrendOption } from '../core/trend.js';
 
 /**
  * How a `view: 'monitor'` binding is shown, its `monitor` option. The graph options apply only
@@ -15,6 +16,13 @@ export interface MonitorOptions {
    * @default 'text'
    */
   view?: 'text' | 'graph';
+  /**
+   * Shows the direction of the value's change, a rise green and a fall red, as stats do: a
+   * preset's name (`'ticker'`, `'steady'`, `'flash'`, `'tint'`) or options. Each sample of the
+   * binding's `interval` is one reading; with no change between readings, or one within the
+   * `threshold`, none shows. Text view only; off by default.
+   */
+  trend?: TrendOption;
   /**
    * Samples the graph keeps, at least 2.
    * @default 64
@@ -52,6 +60,8 @@ export class MonitorView implements ControlView<unknown> {
   #text: TextMonitorView | null = null;
   #element: HTMLElement | null = null;
   #visible = false;
+  /** Created once, like the graph: its readings survive the row being mounted again. */
+  readonly #trend: Trend | null;
   /** Created once: the graph keeps its history across mounts. */
   readonly #graph: GraphMonitorView | null;
 
@@ -63,6 +73,7 @@ export class MonitorView implements ControlView<unknown> {
     max: number | undefined,
     graph: MonitorGraphContext,
   ) {
+    this.#trend = options.view === 'graph' ? null : Trend.from(options.trend);
     this.#graph =
       options.view === 'graph'
         ? new GraphMonitorView({
@@ -85,7 +96,7 @@ export class MonitorView implements ControlView<unknown> {
     if (this.#graph) {
       this.#element = this.#graph.mount();
     } else {
-      this.#text = new TextMonitorView(this.label, this.precision);
+      this.#text = new TextMonitorView(this.label, this.precision, this.#trend);
       this.#element = this.#text.element;
     }
     row.replaceChildren(this.#element);

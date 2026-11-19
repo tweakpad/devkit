@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stats extremes fixture</title>
+    <link rel="stylesheet" href="./fixture.css" />
+  </head>
+  <body>
+    <h1>Stats extremes</h1>
+    <p>
+      Long labels, long values, both, and a mix of short and long, at one width. Narrow it to watch
+      each block fade its labels, hide them, wrap its groups, and last cut its values. Under each
+      pane: its layout now.
+    </p>
+    <div class="controls">
+      <label
+        >Width <input id="width" type="range" min="140" max="720" step="10" value="420" />
+        <output id="width-value">420px</output></label
+      >
+      <label
+        >Labels
+        <select id="labels">
+          <option value="auto">auto</option>
+          <option value="show">show</option>
+          <option value="hide">hide</option>
+        </select>
+      </label>
+    </div>
+    <div id="panes" class="panes"></div>
+    <script type="module" src="./stats-extremes.ts"></script>
+  </body>
+</html>

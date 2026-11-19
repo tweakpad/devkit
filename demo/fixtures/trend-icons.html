@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trend icons fixture</title>
+    <link rel="stylesheet" href="./fixture.css" />
+  </head>
+  <body>
+    <h1>Trend icons</h1>
+    <p>One pane per icon, and one coloring its values instead, all on the same simulated values.</p>
+    <div class="controls">
+      <label
+        >Width <input id="width" type="range" min="200" max="520" step="10" value="340"
+      /></label>
+      <label
+        >Color
+        <select id="color">
+          <option value="off">off</option>
+          <option value="sustain">sustain</option>
+          <option value="flash">flash</option>
+        </select>
+      </label>
+      <label><input id="fade" type="checkbox" /> Fade</label>
+    </div>
+    <div id="panes" class="panes"></div>
+    <script type="module" src="./trend-icons.ts"></script>
+  </body>
+</html>

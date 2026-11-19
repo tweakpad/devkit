@@ -1,0 +1,51 @@
+/* Shared look of the fixture pages: the library's surface, a bar of controls, panes one after
+   the other, so resizing one never moves another sideways. */
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--tp-background);
+  color: var(--tp-foreground);
+  font: 13px/1.5 var(--tp-font-sans);
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+p {
+  margin: 0 0 16px;
+  color: var(--tp-muted-foreground);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-block-end: 24px;
+}
+
+.controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.panes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: start;
+}
+
+.case {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.case > output {
+  font: 11px/1.4 var(--tp-font-mono);
+  color: var(--tp-muted-foreground);
+}

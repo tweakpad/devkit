@@ -34,15 +34,16 @@ Each feature has a page under `docs/<section>/`, written in the same format as t
 generated from the package's TypeScript declarations. The pages ship in the package, with
 `@tweakpad/devkit/docs.json`, and render in Storybook (`npm run storybook`).
 
-| Section    | Pages                                                                                                                                            |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pane       | [Pane](docs/pane/pane.mdx), [Vertical tabs](docs/pane/vertical-tabs.mdx), [Layers](docs/pane/layers.mdx)                                         |
-| Controls   | [Bindings](docs/controls/bindings.mdx), [Buttons](docs/controls/buttons.mdx), [Colors](docs/controls/colors.mdx), [Rows](docs/controls/rows.mdx) |
-| Monitoring | [Monitors](docs/monitoring/monitors.mdx), [Graphs](docs/monitoring/graphs.mdx), [Performance monitor](docs/monitoring/performance.mdx)           |
-| History    | [Version history](docs/history/version-history.mdx)                                                                                              |
+| Section    | Pages                                                                                                                                                                      |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pane       | [Pane](docs/pane/pane.mdx), [Vertical tabs](docs/pane/vertical-tabs.mdx), [Layers](docs/pane/layers.mdx)                                                                   |
+| Controls   | [Bindings](docs/controls/bindings.mdx), [Buttons](docs/controls/buttons.mdx), [Colors](docs/controls/colors.mdx), [Rows](docs/controls/rows.mdx)                           |
+| Monitoring | [Monitors](docs/monitoring/monitors.mdx), [Stats](docs/monitoring/stats.mdx), [Graphs](docs/monitoring/graphs.mdx), [Performance monitor](docs/monitoring/performance.mdx) |
+| History    | [Version history](docs/history/version-history.mdx)                                                                                                                        |
 
 Storybook also has full-screen showcases: an orbit study tuned live, vertical tabs, graphs and
-the performance monitor, nested grouping, and a 1000-binding stress test.
+the performance monitor, a renderer's stats overview, nested grouping, and a 1000-binding stress
+test.
 
 ## Architecture
 
@@ -51,6 +52,7 @@ src/core/      framework-free: Binding, Scheduler, equality, ring queue (unit te
 src/controls/  views wrapping library inline elements in controlled mode
 src/monitors/  text and graph monitor views for bindings
 src/graphs/    graph model (history, ranges, plot stream), view, row (tp-plot)
+src/stats/     stats blocks: formatting, the fit (unit tested), DOM and sampling
 src/perf/      frame meter and built-in performance metrics
 src/history/   version history: paths, value codec, document format, storage (unit tested)
 src/elements/  tweak-pane, tweak-folder, tweak-tabs, tweak-tab-page (Lit, chrome only)
@@ -96,6 +98,16 @@ task after rendering.
 A layer stack of 200 layers, each with a five-control panel, takes about 280 ms to declare and
 first render on the library's Layers widget (`@tweakpad/ui` 0.5.2, Lit dev mode); selecting another
 layer takes about 35–45 ms.
+
+Stats blocks are plain DOM. Each value box is a layout boundary, so a changed value lays out only
+its own box. Ten blocks of 40 stats each (400 values) read at `'frame'` cost 0.17 ms per frame
+in the scheduler when nothing changes. When all 400 change every frame, the cost is 0.4 ms of
+script and 2.2 ms of style and layout. Change chevrons cost about 0.1 ms per frame for 400 trended
+values when nothing changes, whatever their `samples`: a trend keeps running sums, so a reading
+is a few additions. When all 400 chevrons turn every frame, the scheduler takes about 1 ms, and the
+chevrons show and hide with one attribute and no transition. With a 0.3 s fade, that case dropped 18
+frames in 2.5 s; without it, 3. One block of 40 changing values costs about 0.2 ms. At the default
+interval of 250 ms, the block is read four times a second.
 
 The remaining cost belongs to the library elements. The library cost spike
 (`demo/spike-library.html`) measured 110–290 µs per `.value` update, and 0.2–3.3 ms to mount

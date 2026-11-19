@@ -49,6 +49,9 @@ export class Chunk {
     this.rows.push(row);
     this.#searchChildren.add({ kind: 'control', metadata, target: row });
     this.element.append(row.element);
+    // Search hid the chunk while it was empty, and is not rerun without a query: a row makes it
+    // non-empty. With a query, the container's search refresh right after filters it again.
+    if (this.element.hidden) this.element.hidden = false;
     const n = this.rows.length;
     // A plain property, not a custom property: library controls inside watch custom properties
     // on their ancestors, and must not wake for this.

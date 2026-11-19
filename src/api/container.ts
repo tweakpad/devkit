@@ -15,6 +15,8 @@ import { ControlRow } from './rows.js';
 import { ButtonApi, ButtonRow, type ButtonParams } from './buttons.js';
 import { SeparatorApi, SeparatorRow, type SeparatorParams } from './separator.js';
 import { createGraph, GraphApi } from './graph.js';
+import { createStats, StatsApi } from './stats.js';
+import type { StatsParams } from '../stats/types.js';
 import { LayersApi, type LayersParams } from './layers.js';
 import {
   createPerformanceMonitor,
@@ -199,6 +201,20 @@ export class ContainerApi {
     if (params.hidden) row.setHidden(true);
     this.#addRow(row, row.metadata);
     const api = new GraphApi(row, this.context);
+    this.#children.push(api);
+    return api;
+  }
+
+  /**
+   * Adds a block of stats: live values in titled groups set side by side, condensed for a glance.
+   * The block fits its width: labels shorten, then hide (showing on hover), before groups wrap to
+   * fewer columns. Values are read at `interval` while the block is visible.
+   */
+  addStats(params: StatsParams): StatsApi {
+    if (this.inline) throw new Error('devkit: stats cannot go in a row');
+    const row = createStats(this.context, params);
+    this.#addRow(row, row.metadata);
+    const api = new StatsApi(row, this.context);
     this.#children.push(api);
     return api;
   }

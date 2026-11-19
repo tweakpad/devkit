@@ -16,6 +16,10 @@ export type { MonitorOptions } from './controls/monitor-view.js';
 export { ButtonApi, type ButtonParams } from './api/buttons.js';
 export { SeparatorApi, type SeparatorParams } from './api/separator.js';
 export { GraphApi } from './api/graph.js';
+export { StatApi, StatsApi, StatsGroupApi } from './api/stats.js';
+export type { StatParams, StatPartParams, StatsGroupParams, StatsParams } from './stats/types.js';
+export type { TrendIcon, TrendOption, TrendParams, TrendPreset } from './core/trend.js';
+export type { StatFormat, StatValue } from './stats/format.js';
 export type {
   GraphGuide,
   GraphHeaderContext,

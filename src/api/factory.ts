@@ -183,7 +183,8 @@ export function createControl(
       const graph = params.monitor?.view === 'graph';
       if (graph && typeof raw !== 'number')
         throw new TypeError('devkit: graph views require a numeric binding');
-      const binding = make<unknown>(graph ? () => false : undefined);
+      // A graph and a trend take every sample, changed or not: each one is a reading.
+      const binding = make<unknown>(graph || params.monitor?.trend ? () => false : undefined);
       const view = new MonitorView(
         label,
         params.monitor ?? {},

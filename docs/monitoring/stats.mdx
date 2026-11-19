@@ -1,0 +1,389 @@
+---
+title: Stats
+description: A condensed block of live values in titled groups, laid out to fit its width with the values first.
+symbol: pane.addStats(params)
+api: [StatsParams, StatsApi, StatsGroupParams, StatsGroupApi, StatParams, StatPartParams, StatApi, StatFormat, StatValue, TrendOption, TrendPreset, TrendParams, TrendIcon]
+---
+
+<Preview
+  title="Stats"
+  code={`<div id="stats-hero"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const MB = 1024 * 1024;
+const gpu = { textures: 1019 * MB, textureCount: 97, geometry: 21 * MB, geometryCount: 726 };
+const frame = { calls: 277, triangles: 1832510, programs: 272 };
+setInterval(() => {
+  gpu.textures += Math.round((Math.random() - 0.5) * 8 * MB);
+  frame.calls = 260 + Math.round(Math.random() * 30);
+  frame.triangles = 1800000 + Math.round(Math.random() * 60000);
+}, 400);
+
+// Inline with its count, textures shows its trend by color: an icon there leaves a gap when off.
+const inline = { preset: 'tint', samples: 8 };
+const pane = new Pane({ container: document.getElementById('stats-hero'), title: 'Renderer' });
+pane.element.style.setProperty('--tweak-pane-width', '24rem');
+pane.addStats({
+  groups: [
+    {
+      title: 'GPU memory',
+      stats: [
+        {
+          label: 'textures',
+          parts: [
+            { value: () => gpu.textures, format: 'bytes', trend: inline },
+            { value: () => gpu.textureCount, muted: true },
+          ],
+        },
+        {
+          label: 'geometry',
+          parts: [
+            { value: () => gpu.geometry, format: 'bytes' },
+            { value: () => gpu.geometryCount, muted: true },
+          ],
+        },
+        { label: 'total', value: () => gpu.textures + gpu.geometry, format: 'bytes' },
+      ],
+    },
+    {
+      title: 'Frame',
+      stats: [
+        { label: 'draw calls', value: () => frame.calls, trend: 'steady' },
+        { label: 'triangles', value: () => frame.triangles },
+        { label: 'programs', value: () => frame.programs },
+      ],
+    },
+  ],
+});`}
+/>
+
+## Usage
+
+`addStats` adds a block of read-only values to a pane, folder, tab page or layer panel. It shows many
+numbers at a glance, such as a renderer's memory and frame counters. Stats sit in titled groups,
+and groups sit side by side. Each value is read from a function a few times a second, while the
+block is visible. A block that is hidden, collapsed or scrolled away is not read.
+
+<Code
+  code={`pane.addStats({
+  groups: [
+    {
+      title: 'Frame',
+      stats: [
+        { label: 'draw calls', value: () => renderer.info.calls },
+        { label: 'triangles', value: () => renderer.info.triangles },
+      ],
+    },
+  ],
+});`}
+  language="ts"
+/>
+
+Values lead and labels follow. Values print in the foreground color in a monospaced font, and
+labels are muted. A monitor binding gives one value a full row, while a stats block fits many
+values into the room of a few rows.
+
+### Groups
+
+`groups` takes the groups in order, each with an optional `title` and its `stats`. Use `stats` in
+place of `groups` for one untitled group. Groups sit side by side while they fit, each a column
+of labels and values. When they do not fit, they wrap to more rows. A titled group's stats hang
+from a guide line, drawn as a folder's: a line in the border color with a dot level with each
+label, so they read as the group's items. `guides: false` leaves it out, and the matrix layout has none.
+
+<Preview
+  title="Groups"
+  code={`<div id="stats-groups"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const scene = { enemies: 32, trees: 45, shadows: 'realtime' };
+const pane = new Pane({ container: document.getElementById('stats-groups'), title: 'Scene' });
+pane.element.style.setProperty('--tweak-pane-width', '24rem');
+pane.addStats({
+  groups: [
+    {
+      title: 'Visible',
+      stats: [
+        { label: 'enemies', value: () => scene.enemies },
+        { label: 'trees', value: () => scene.trees },
+        { label: 'total', value: () => scene.enemies + scene.trees },
+      ],
+    },
+    { title: 'Shadows', stats: [{ label: 'mode', value: () => scene.shadows }] },
+  ],
+});`}
+/>
+
+### Multiple values
+
+A stat with `parts` shows several values joined by its `separator` (`' / '` by default). Examples
+are memory and count, or a count and an average. A part's `before` and `after` put other text
+around it, and `muted` dims a secondary value.
+
+<Preview
+  title="Multiple values"
+  code={`<div id="stats-parts"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const lod = [{ n: 4, avg: 10400 }, { n: 7, avg: 4600 }, { n: 34, avg: 2900 }];
+const cadence = { target: 0.49, spent: 0.62, max: 43.9, over: 7 };
+const pane = new Pane({ container: document.getElementById('stats-parts'), title: 'Scheduler' });
+pane.addStats({
+  stats: [
+    ...lod.map((level, i) => ({
+      label: 'L' + i,
+      separator: ' · ',
+      parts: [
+        { value: () => level.n },
+        { value: () => level.avg, format: 'compact' },
+      ],
+    })),
+    {
+      label: 'target / spent / max',
+      parts: [
+        { value: () => cadence.target, unit: 'ms' },
+        { value: () => cadence.spent },
+        { value: () => cadence.max },
+        { value: () => cadence.over, before: ' (', after: ')', muted: true },
+      ],
+    },
+  ],
+});`}
+/>
+
+### Formatting
+
+A value can be a number, a bigint, a string or a boolean. `null` and `undefined` print as an em
+dash. Without a `format`, integers print with thousands grouped, and other numbers with `precision`
+decimals (2 by default). `format` picks another way to print a number:
+
+- `'number'`: `precision` decimals, grouped;
+- `'integer'`: rounded, grouped;
+- `'compact'`: with a k, M, B or T suffix (`10.4k`);
+- `'bytes'`: binary units from B to TB (`1019 MB`);
+- `'percent'`: a ratio as a percentage (`0.25` prints `25%`);
+- a function, for any text of your own.
+
+`unit` adds a unit after the value, such as `ms`. Formatting does not use `Intl`, so reading every
+frame stays cheap. Nothing is written unless the printed text changes.
+
+### Change chevrons
+
+`trend` shows the direction of a value's change, as a ticker does: a rise green and a fall red,
+with the library's `--tp-success` and `--tp-destructive`. It takes a preset's name, or options:
+
+| Preset | Shows |
+| --- | --- |
+| `'ticker'` | An arrow after the value, following every change. |
+| `'steady'` | An arrow comparing averages of 8 readings, so noise shows none. |
+| `'flash'` | No icon: the value flashes green or red on each change. For a value inline with others. |
+| `'tint'` | No icon: the value stays green or red while the trend shows. |
+
+Options can start from a preset and change some of it: `{ preset: 'steady', better: 'lower' }`.
+`better: 'lower'` swaps the colors, for a value where less is better; use it only where readers
+expect it, since every ticker shows a rise green. Monitors take the same `trend` option, under
+`monitor`.
+
+The chevron works in samples, not time: each read of the block's `interval`, or each
+`StatApi.set()`, is one sample. By default it compares each sample with the one before, so it
+follows every change, and it clears on a sample without a change. For a value that jitters, such
+as a frame rate, that turns it up and down all the time. `samples` steadies it:
+
+- `samples` compares the average of the last `samples` readings with the average of the
+  `samples` before, and shows a chevron only when the difference stands out from the readings'
+  own noise. Two averages of noise are never quite equal, so the spread of the readings sets the
+  bar: the difference must be `deviations` standard errors (3 by default), as a t-test or a
+  Bollinger band measures it. Noise then shows no chevron, a real rise or fall does, and the more
+  samples, the smaller the change it can tell from noise. A shown chevron stays until the
+  difference falls below half the bar, so it does not flicker. Nothing shows until there are
+  `2 × samples` readings.
+- `deviations` moves the bar: 2 shows changes sooner and noise more often, 0 shows any difference.
+- `threshold` is the change too small to matter, however clear: a change of at most this much
+  shows no chevron. It is a number in the value's units, or a share of the earlier value, such as
+  `'2%'`.
+
+The value itself always shows at once; only the chevron is steadied. The chevron reads the value as
+printed, so noise below `precision` never moves it.
+
+<Preview
+  title="Change chevrons"
+  code={`<div id="stats-trend"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const frame = { fps: 60, calls: 270 };
+const cache = { hits: 666 };
+setInterval(() => {
+  frame.fps = 57 + Math.random() * 6;
+  frame.calls = 260 + Math.round(Math.random() * 20);
+  cache.hits += Math.random() < 0.3 ? 1 : 0;
+}, 250);
+const pane = new Pane({ container: document.getElementById('stats-trend'), title: 'Renderer' });
+pane.addStats({
+  groups: [
+    {
+      title: 'Instant',
+      stats: [
+        { label: 'fps', value: () => frame.fps, precision: 0, trend: 'ticker' },
+        { label: 'draw calls', value: () => frame.calls, trend: 'ticker' },
+        { label: 'hits', value: () => cache.hits, trend: 'ticker' },
+      ],
+    },
+    {
+      title: 'Steady',
+      stats: [
+        {
+          label: 'fps',
+          value: () => frame.fps,
+          precision: 0,
+          trend: 'steady',
+        },
+        {
+          label: 'draw calls',
+          value: () => frame.calls,
+          trend: 'steady',
+        },
+        { label: 'hits', value: () => cache.hits, trend: 'steady' },
+      ],
+    },
+  ],
+});`}
+/>
+
+`icon` picks the mark: `'arrow'` (arrow-up and arrow-down, the default), `'arrow-diagonal'`
+(arrow-up-right and arrow-down-right), `'chevron'` or `'triangle'`, filled. `color: true` colors
+the value itself green or red while the trend shows, with the icon or, with `icon: false`, alone.
+`icon: false` keeps no room for an icon. `color: 'flash'` colors the value only for a moment on each
+change, as a ticker does; `--tweak-trend-flash` sets how long (0.5s). `fade: true` fades the icon and
+the color in and out instead of switching them at once. Both colors are the library's
+`--tp-success` and `--tp-destructive`.
+
+In a stat with several values, show a trend by color alone (`icon: false`): an icon between two
+values leaves a gap whenever it is off.
+
+`StatApi.resetTrend()` forgets the readings so far and clears the chevron. The chevron sits after
+the value, and its slot is reserved from the start, so the value never shifts when it shows.
+`side: 'start'` puts it before the value instead, which also lines digits up with values that have
+no chevron.
+
+### Fitting the space
+
+A stats block lays itself out from measured widths, and values always come first. Labels are
+measured once. Values are monospaced, so a value's width is its length in characters. Each value
+keeps room for the widest value it has shown, so the layout does not move as values change.
+
+A label reads when it shows at least two thirds of its text, beside its own value. Each column
+shows its labels while two thirds of them read, and hides them otherwise, moving its values to its
+start. So one long label, or one long value, among short ones fades instead of hiding the others,
+while a column of mostly long labels hides them sooner than cut most of them. A column never mixes
+shown and hidden labels; groups stacked in one column decide together.
+
+Groups sit side by side in as many columns as have room for their labels. Narrower than that, they
+stack into fewer columns, and once stacked they never go back to side by side at a narrower width.
+When even one column has no room for its labels, it hides them; values are cut only when nothing
+else is left. Spare width goes first where it lets a column show its labels, then toward each
+column's longest label and title. The block works this out once, when labels are measured or a
+value grows, and each column's CSS compares its own width with its threshold, so resizing needs
+no script.
+
+A label that does not show in full (hidden, or fading) shows on hover, together with its group, and
+stays readable to screen readers. A tooltip shows only that: a stat's label, never its value. While
+a column hides its labels, the block is one tab stop, and arrow keys move between values and show
+the same label. The panes below show labels shown, fading and hidden at three widths.
+
+<Preview
+  title="Fitting the space"
+  code={`<div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: start">
+  <div id="stats-fit-wide"></div>
+  <div id="stats-fit-middle"></div>
+  <div id="stats-fit-narrow"></div>
+</div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const frame = { calls: 277, triangles: 1832510 };
+const memory = { textures: 1019 * 1024 * 1024, targets: 60 };
+for (const [id, width] of [['wide', '22rem'], ['middle', '13rem'], ['narrow', '10rem']]) {
+  const pane = new Pane({ container: document.getElementById('stats-fit-' + id), title: width });
+  pane.element.style.setProperty('--tweak-pane-width', width);
+  pane.addStats({
+    groups: [
+      {
+        title: 'Memory',
+        stats: [
+          { label: 'textures', value: () => memory.textures, format: 'bytes' },
+          { label: 'targets', value: () => memory.targets },
+        ],
+      },
+      {
+        title: 'Frame',
+        stats: [
+          { label: 'draw calls', value: () => frame.calls },
+          { label: 'triangles', value: () => frame.triangles },
+        ],
+      },
+    ],
+  });
+}`}
+/>
+
+`columns` limits the group columns: a number for exactly that many, or `{ min, max }`. `labels:
+'show'` keeps every column's labels (fading at worst) and wraps groups instead, and
+`'hide'` always hides them. `reserve` gives a
+value room for its widest text from the start, such as `'0000 MB'`. If nothing fits even at the
+fewest columns without labels, values are cut short and the block logs one
+warning to the console. `StatsApi.layout` returns the layout in use.
+
+### Matrix layout
+
+`layout: 'matrix'` is for groups that have the same stats, such as several caches with hits and
+misses. Each label is written once, as a row, and each group gets a column headed by its title. A
+stat's row is set by its `id`, or by its label. A group without that stat leaves its cell empty.
+When the matrix is too narrow, it hides its labels first, and falls back to the groups layout when
+even its values do not fit.
+
+<Preview
+  title="Matrix layout"
+  code={`<div id="stats-matrix"></div>`}
+  script={`import { Pane } from '@tweakpad/devkit';
+
+const MB = 1024 * 1024;
+const caches = {
+  Persistent: { hits: 7, misses: 0, bytes: 23.9 * MB },
+  Session: { hits: 666, misses: 1556, bytes: 5.4 * MB },
+  Material: { hits: 30, misses: 0, bytes: 118.7 * MB },
+};
+setInterval(() => (caches.Session.hits += Math.round(Math.random() * 4)), 500);
+const pane = new Pane({ container: document.getElementById('stats-matrix'), title: 'Cache' });
+pane.element.style.setProperty('--tweak-pane-width', '22rem');
+pane.addStats({
+  layout: 'matrix',
+  groups: Object.entries(caches).map(([title, cache]) => ({
+    title,
+    stats: [
+      { label: 'hits', value: () => cache.hits, trend: 'ticker' },
+      { label: 'misses', value: () => cache.misses, trend: 'ticker' },
+      { label: 'bytes', value: () => cache.bytes, format: 'bytes' },
+    ],
+  })),
+});`}
+/>
+
+### Updating
+
+Values are read every `interval` milliseconds, 250 by default. `'frame'` reads them every frame,
+and `'manual'` reads them only on `refresh()`. In a pane whose `refresh` is `'manual'`, the block
+is manual too. A part with a fixed `value` in place of a function changes with `StatApi.set()`,
+which takes one value, or one per part.
+
+<Code
+  code={`const stats = pane.addStats({
+  interval: 'manual',
+  groups: [{ id: 'net', title: 'Network', stats: [{ label: 'latency', value: 0, unit: 'ms' }] }],
+});
+socket.on('pong', (ms) => stats.stat('net/latency').set(ms));`}
+  language="ts"
+/>
+
+`stat('group/stat')` finds a stat by its group and its `id` (or label), and `stat(id)` finds it by
+its id alone. Groups and stats can be added with `addGroup` and `addStat`, and renamed, hidden and
+disposed. The block lays itself out again after each change. The block is one search result: a
+search for its title, a group title or any label shows the whole block.
