@@ -1,6 +1,6 @@
 {
   "name": "@tweakpad/devkit",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "High-performance tweak panel for tuning live values, built on @tweakpad/ui inline controls.",
   "license": "MIT",
   "author": "Tweakpad",
@@ -61,7 +61,7 @@
     "build-storybook": "npm run docs:build && storybook build"
   },
   "dependencies": {
-    "@tweakpad/ui": "^0.5.2"
+    "@tweakpad/ui": "^0.5.3"
   },
   "peerDependencies": {
     "lit": "^3.3.0"
