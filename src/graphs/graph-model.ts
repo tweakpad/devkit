@@ -6,6 +6,8 @@ import type { GraphLayout, GraphMarker, GraphSeries, GraphSeriesSnapshot } from 
 /** Creates the plot stream; injected so the model has no DOM or library-element dependency. */
 export type StreamFactory = (seriesIds: readonly string[], capacity: number) => PlotStream;
 
+/** The stroke of every series line, in CSS px; the view keeps room for it at the plot's edges. */
+export const LINE_WIDTH = 1.5;
 /** The fill opacity of one plot, shared by the series on it. */
 const DEFAULT_FILL = 0.15;
 const GUIDE_DASH = Object.freeze([3, 3]);
@@ -379,7 +381,7 @@ export class GraphModel {
         id: state.def.id,
         label: state.def.label,
         color: state.color,
-        lineWidth: 1.5,
+        lineWidth: LINE_WIDTH,
         ...(opacity > 0 ? { fill: { baseline: state.scale.baseline, opacity } } : {}),
       };
     });

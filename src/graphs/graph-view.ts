@@ -1,5 +1,5 @@
 import type { PlotRenderScheduler, TpPlot } from '@tweakpad/ui/widgets';
-import type { GraphModel } from './graph-model.js';
+import { LINE_WIDTH, type GraphModel } from './graph-model.js';
 import type { GraphHeaderContext } from './types.js';
 
 export interface GraphViewOptions {
@@ -28,7 +28,33 @@ const PARTS: TpPlot['partPresentation'] = Object.freeze({
   },
 });
 const STRINGS = Object.freeze({ empty: '' });
-const Y_DOMAIN = Object.freeze([0, 1] as const);
+
+/**
+ * Series are normalized to 0..1, and the plot maps its y domain onto its full height, so a value at
+ * a bound would put its line on the edge, half the stroke cut off. The domain is widened by half
+ * the stroke (and a pixel's antialiasing) in the plot's own units: values at their bounds keep
+ * the whole line. Heights come from one observer shared by every graph, so no layout is read;
+ * the domain changes only when a plot's height does.
+ */
+const EDGE = LINE_WIDTH / 2 + 0.5;
+const insets = new WeakMap<Element, (height: number) => void>();
+let observer: ResizeObserver | undefined;
+const observeHeight = (plot: Element, apply: (height: number) => void) => {
+  observer ??= new ResizeObserver((entries) => {
+    for (const entry of entries) insets.get(entry.target)?.(entry.contentRect.height);
+  });
+  insets.set(plot, apply);
+  observer.observe(plot);
+};
+const unobserveHeight = (plot: Element) => {
+  insets.delete(plot);
+  observer?.unobserve(plot);
+};
+/** The y domain of a plot `height` px tall; before it has one, 0..1. */
+const yDomain = (height: number) => {
+  const pad = height > 2 * EDGE ? EDGE / (height - 2 * EDGE) : 0;
+  return Object.freeze([-pad, 1 + pad] as const);
+};
 
 interface Entry {
   element: HTMLSpanElement;
@@ -98,7 +124,7 @@ export class GraphView {
     plot.partPresentation = PARTS;
     plot.strings = STRINGS;
     plot.mode = 'push';
-    plot.yDomain = Y_DOMAIN;
+    plot.yDomain = yDomain(0);
     plot.window = model.capacity - 1;
     plot.background = 'solid';
     plot.maxFrameRate = options.maxFrameRate;
@@ -107,6 +133,12 @@ export class GraphView {
 
     row.append(head, plot);
     this.element = row;
+    let height = 0;
+    observeHeight(plot, (next) => {
+      if (Math.abs(next - height) < 0.5) return;
+      height = next;
+      plot.yDomain = yDomain(next);
+    });
     row.addEventListener('click', this.#onClick);
     row.addEventListener('keydown', this.#onKey);
     this.#unsubscribePage = model.onPage(() => this.#applyPage());
@@ -162,6 +194,7 @@ export class GraphView {
     clearTimeout(this.#timer);
     this.#timer = undefined;
     this.#unsubscribePage();
+    unobserveHeight(this.#plot);
     this.element.removeEventListener('click', this.#onClick);
     this.element.removeEventListener('keydown', this.#onKey);
     this.element.remove();

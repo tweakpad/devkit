@@ -46,6 +46,20 @@ export async function checkGraphs(): Promise<string[]> {
     await until(() => plotOf(graph) !== null);
     const plot = plotOf(graph)!;
     check(graph instanceof GraphApi && plot !== null, 'addGraph mounts a tp-plot row');
+    // A value at a bound keeps its whole line: the domain leaves half the stroke (1.5px) and a
+    // pixel of antialiasing between the series' range and the plot's edges.
+    await until(() => plot.yDomain !== 'auto' && plot.yDomain[1] > 1);
+    {
+      const domain = plot.yDomain as readonly [number, number];
+      const height = plot.getBoundingClientRect().height;
+      const edge = (value: number) =>
+        (height * Math.abs(value - (value > 0.5 ? domain[1] : domain[0]))) /
+        (domain[1] - domain[0]);
+      check(
+        Math.abs(edge(1) - 1.25) < 0.05 && Math.abs(edge(0) - 1.25) < 0.05,
+        "a series at its bounds keeps its line's whole stroke inside the plot",
+      );
+    }
     check(
       plot.mode === 'push' && plot.stream?.xMode === 'index',
       'graphs use push mode on an index stream',
